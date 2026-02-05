@@ -206,3 +206,26 @@ for each cycle in simulation:
 
 ## Final Note
 Nexawealth turns financial literacy into lived experience. Users learn by making choices, feeling the consequences, and discovering how small decisions compound into long-term outcomes.
+
+# Nexawealth V2
+
+Nexawealth V2 is a fully interactive, decision-driven financial literacy simulator. Every mode teaches through choices and consequences—no lectures, no static tutorials.
+
+## What’s new in V2
+- Decision-driven Simulation Mode (no manual number tweaking)
+- Life Scenario Mode with multiple profiles
+- Decision Lab micro-experiences
+- Market Explorer with risk/return experimentation
+- Personal Finance Toolkit
+- Future Self timeline projections
+- Interactive “How Money Works” exploration
+- Practical Banking Mode
+- Reflection & insights mode
+
+## Run locally
+```bash
+npm install
+npm run dev
+```
+Then open the URL shown in the terminal.
+
