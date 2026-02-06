@@ -104,86 +104,111 @@ const usePersistentState = (key, initialValue) => {
   return [state, setPersisted];
 };
 
-const decisionLabItems = [
+const decisionLabTemplates = [
+  {
+    key: "daily_habit",
+    title: "Daily habit check",
+    prompt: "A small daily habit is adding up.",
+    scales: ["small"],
+    choices: [
+      { label: "Keep it daily", cashDelta: -12, stressDelta: -2, insight: "Comfort rises, flexibility slips." },
+      { label: "Switch to weekly", cashDelta: -4, stressDelta: 1, insight: "Cash improves, habit stays." },
+      { label: "Pause for now", cashDelta: 0, stressDelta: 2, insight: "Short-term discipline, long-term freedom." }
+    ]
+  },
+  {
+    key: "subscription",
+    title: "Subscription choice",
+    prompt: "A low-cost app renewal hits today.",
+    scales: ["small", "medium"],
+    choices: [
+      { label: "Keep it", cashDelta: -18, stressDelta: -1, insight: "Convenience stays, buffer shrinks." },
+      { label: "Cancel", cashDelta: 0, stressDelta: 1, insight: "Cash freed up, minor friction added." }
+    ]
+  },
   {
     key: "bonus",
     title: "Bonus allocation",
-    prompt: "You receive a $1,200 bonus. Where do you send it?",
+    prompt: "You receive a surprise bonus.",
+    scales: ["large"],
     choices: [
-      {
-        label: "Invest it",
-        outcome: "You boosted long-term growth, but your cash buffer stayed the same.",
-        effect: "+12% long-term projection"
-      },
-      {
-        label: "Pay debt",
-        outcome: "Debt drops immediately, lowering stress and interest.",
-        effect: "-1.5 yrs to debt freedom"
-      },
-      {
-        label: "Emergency fund",
-        outcome: "Short-term safety rises, reducing stress volatility.",
-        effect: "+2 months runway"
-      }
-    ]
-  },
-  {
-    key: "crash",
-    title: "Market crash",
-    prompt: "Markets drop 15% in a month. What do you do?",
-    choices: [
-      {
-        label: "Hold",
-        outcome: "You avoid locking in losses and stay on track for recovery.",
-        effect: "Stability preserved"
-      },
-      {
-        label: "Buy more",
-        outcome: "You lower your average cost, boosting future gains.",
-        effect: "+8% growth potential"
-      },
-      {
-        label: "Sell",
-        outcome: "You reduce risk now, but give up the rebound.",
-        effect: "Stress -4, growth -6%"
-      }
-    ]
-  },
-  {
-    key: "lifestyle",
-    title: "Lifestyle upgrade",
-    prompt: "You consider upgrading your lifestyle by $400/mo.",
-    choices: [
-      {
-        label: "Upgrade",
-        outcome: "Comfort rises, but savings slow down.",
-        effect: "Runway -1 month"
-      },
-      {
-        label: "Delay",
-        outcome: "You keep momentum toward your goals.",
-        effect: "+4 months to target"
-      }
+      { label: "Invest it", cashDelta: 0, stressDelta: -1, opportunity: "Growth potential increases." },
+      { label: "Pay debt", cashDelta: 0, stressDelta: -3, opportunity: "Interest burden drops now." },
+      { label: "Hold cash", cashDelta: 1, stressDelta: -2, opportunity: "Liquidity improves immediately." }
     ]
   },
   {
     key: "loan",
     title: "Loan vs cash purchase",
-    prompt: "You need a $2,000 laptop. What is the move?",
+    prompt: "You need a high-ticket item today.",
+    scales: ["medium", "large"],
     choices: [
-      {
-        label: "Cash purchase",
-        outcome: "Cash dips now, but no interest accrues.",
-        effect: "Stress +2, interest saved"
-      },
-      {
-        label: "Installments",
-        outcome: "Cash stays higher, but interest adds up.",
-        effect: "+$140 total cost"
-      }
+      { label: "Pay cash", cashDelta: -1, stressDelta: 2, opportunity: "No interest, but cash dips." },
+      { label: "Use installments", cashDelta: -0.2, stressDelta: -1, opportunity: "Cash stays higher, total cost rises." }
+    ]
+  },
+  {
+    key: "market",
+    title: "Market mood swing",
+    prompt: "Markets swing sharply this week.",
+    scales: ["medium", "large"],
+    choices: [
+      { label: "Hold steady", cashDelta: 0, stressDelta: -1, opportunity: "You avoid panic moves." },
+      { label: "Buy more", cashDelta: -0.6, stressDelta: 1, opportunity: "Higher upside, higher anxiety." },
+      { label: "Sell some", cashDelta: 0.4, stressDelta: -1, opportunity: "Risk drops, growth slows." }
     ]
   }
 ];
+
+const decisionLabAmounts = {
+  small: { min: 5, max: 180, horizon: "daily" },
+  medium: { min: 200, max: 3000, horizon: "monthly" },
+  large: { min: 5000, max: 500000, horizon: "one-time" }
+};
+
+const generateDecisionLabScenario = (difficulty = "mixed") => {
+  const scaleOptions =
+    difficulty == "small" ? ["small"] : difficulty == "large" ? ["large"] : ["small", "medium", "large"];
+  const scale = scaleOptions[Math.floor(Math.random() * scaleOptions.length)];
+  const templatePool = decisionLabTemplates.filter((template) => template.scales.includes(scale));
+  const template = templatePool[Math.floor(Math.random() * templatePool.length)];
+  const amountRange = decisionLabAmounts[scale];
+  const amount = Math.round(amountRange.min + Math.random() * (amountRange.max - amountRange.min));
+  const prompt = `${template.prompt} Amount: ${formatCurrency(amount)} (${amountRange.horizon}).`;
+
+  const choices = template.choices.map((choice) => {
+    const cashImpact = choice.cashDelta * amount;
+    const stressImpact = choice.stressDelta ?? 0;
+    const opportunity = choice.opportunity ?? "Opportunity cost shifts subtly.";
+    const effects = [
+      cashImpact == 0
+        ? "Cash stays steady."
+        : cashImpact > 0
+        ? `Cash +${formatCurrency(cashImpact)}`
+        : `Cash ${formatCurrency(cashImpact)}`,
+      stressImpact > 0
+        ? `Stress +${stressImpact}`
+        : stressImpact < 0
+        ? `Stress ${stressImpact}`
+        : "Stress unchanged.",
+      opportunity
+    ];
+
+    return {
+      label: choice.label,
+      outcome: choice.insight ?? "Immediate impact registered.",
+      effects
+    };
+  });
+
+  return {
+    id: `${template.key}-${Date.now()}`,
+    title: template.title,
+    prompt,
+    scale,
+    choices
+  };
+};
 
 const bankAllocationDefaults = {
   savings: 0.3,
@@ -203,7 +228,9 @@ export default function App() {
     debtBalance: lifeStage.debts.reduce((sum, debt) => sum + debt.balance, 0),
     debts: lifeStage.debts
   });
-  const [decisionLabState, setDecisionLabState] = useState({});
+  const [decisionLabDifficulty, setDecisionLabDifficulty] = useState("mixed");
+  const [decisionLabScenario, setDecisionLabScenario] = useState(() => generateDecisionLabScenario("mixed"));
+  const [decisionLabResult, setDecisionLabResult] = useState(null);
   const [marketExplorer, setMarketExplorer] = useState({ horizon: 10, contribution: 300, risk: 0.6 });
   const [toolkit, setToolkit] = useState({
     budgetIncome: 5200,
@@ -305,6 +332,11 @@ export default function App() {
     }
     return points;
   }, [marketExplorer]);
+
+  const handleDecisionLabNext = (difficulty = decisionLabDifficulty) => {
+    setDecisionLabScenario(generateDecisionLabScenario(difficulty));
+    setDecisionLabResult(null);
+  };
 
   return (
     <div className="app">
@@ -548,33 +580,51 @@ export default function App() {
 
       {activeMode === "decision_lab" && (
         <section className="grid">
-          {decisionLabItems.map((item) => (
-            <div key={item.key} className="panel">
-              <h2>{item.title}</h2>
-              <p>{item.prompt}</p>
-              <div className="choice-buttons">
-                {item.choices.map((choice) => (
-                  <button
-                    key={choice.label}
-                    onClick={() =>
-                      setDecisionLabState((prev) => ({
-                        ...prev,
-                        [item.key]: choice
-                      }))
-                    }
-                  >
-                    {choice.label}
-                  </button>
-                ))}
-              </div>
-              {decisionLabState[item.key] && (
-                <div className="insight">
-                  <p>{decisionLabState[item.key].outcome}</p>
-                  <strong>{decisionLabState[item.key].effect}</strong>
-                </div>
-              )}
+          <div className="panel">
+            <h2>{decisionLabScenario.title}</h2>
+            <p>{decisionLabScenario.prompt}</p>
+            <ChoiceButtons
+              label="Decision intensity"
+              value={decisionLabDifficulty}
+              onChange={(value) => {
+                setDecisionLabDifficulty(value);
+                handleDecisionLabNext(value);
+              }}
+              options={[
+                { value: "mixed", label: "Mixed" },
+                { value: "small", label: "Daily" },
+                { value: "large", label: "Big" }
+              ]}
+            />
+            <div className="choice-buttons">
+              {decisionLabScenario.choices.map((choice) => (
+                <button
+                  key={choice.label}
+                  onClick={() => setDecisionLabResult(choice)}
+                >
+                  {choice.label}
+                </button>
+              ))}
             </div>
-          ))}
+            <button className="ghost" onClick={() => handleDecisionLabNext()}>
+              Next decision
+            </button>
+          </div>
+          <div className="panel">
+            <h2>Instant feedback</h2>
+            {decisionLabResult ? (
+              <div className="insight">
+                <p>{decisionLabResult.outcome}</p>
+                <ul className="feedback">
+                  {decisionLabResult.effects.map((effect) => (
+                    <li key={effect}>{effect}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <p className="muted">Pick a choice to see the immediate impact.</p>
+            )}
+          </div>
         </section>
       )}
 
