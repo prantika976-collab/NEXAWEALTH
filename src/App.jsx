@@ -468,7 +468,22 @@ export default function App() {
     debtAmount: 12000,
     debtPayment: 350,
     savingsMonthly: 400,
-    savingsRate: 0.04
+    savingsRate: 0.04,
+    emergencyExpenses: 1800,
+    emergencyMonths: 4,
+    expenseCutAmount: 60,
+    incomeSplitIncome: 5200,
+    incomeSplitNeeds: 0.5,
+    incomeSplitWants: 0.3,
+    incomeSplitSavings: 0.2,
+    loanIncome: 5200,
+    loanEmi: 480,
+    timeSaveNow: 250,
+    timeSaveLater: 450,
+    timeDelayMonths: 6,
+    habitAmount: 5,
+    habitFrequency: "daily",
+    habitYears: 3
   });
   const [banking, setBanking] = useState(bankAllocationDefaults);
   const [timelineDecision, setTimelineDecision] = useState({ ...defaultDecision, investment: 500 });
@@ -538,6 +553,24 @@ export default function App() {
   const goalMonths = Math.ceil(toolkit.goalAmount / Math.max(toolkit.goalMonthly, 1));
   const debtMonths = Math.ceil(toolkit.debtAmount / Math.max(toolkit.debtPayment, 1));
   const savingsProjection = toolkit.savingsMonthly * 12 * (1 + toolkit.savingsRate);
+  const emergencyTarget = toolkit.emergencyExpenses * toolkit.emergencyMonths;
+  const expenseCutImpact = toolkit.expenseCutAmount * 12;
+  const expenseCutOpportunity = Math.round(expenseCutImpact * 1.08);
+  const incomeSplitTotal =
+    toolkit.incomeSplitNeeds + toolkit.incomeSplitWants + toolkit.incomeSplitSavings;
+  const incomeSplitAmounts = {
+    needs: toolkit.incomeSplitIncome * toolkit.incomeSplitNeeds,
+    wants: toolkit.incomeSplitIncome * toolkit.incomeSplitWants,
+    savings: toolkit.incomeSplitIncome * toolkit.incomeSplitSavings
+  };
+  const loanRatio = toolkit.loanEmi / Math.max(toolkit.loanIncome, 1);
+  const loanLabel = loanRatio < 0.25 ? "comfortable" : loanRatio < 0.4 ? "tight" : "risky";
+  const horizonMonths = 36;
+  const saveNowTotal = toolkit.timeSaveNow * horizonMonths;
+  const saveLaterTotal = toolkit.timeSaveLater * Math.max(horizonMonths - toolkit.timeDelayMonths, 0);
+  const habitMultiplier = toolkit.habitFrequency === "daily" ? 365 : 12;
+  const habitAnnual = toolkit.habitAmount * habitMultiplier;
+  const habitMultiYear = habitAnnual * toolkit.habitYears;
 
   const timelineNow = useMemo(
     () => projectFuture({ lifeStage, decision, expenses, state: simulationState }, 60),
@@ -1179,6 +1212,166 @@ export default function App() {
               />
             </label>
             <p className="muted">Projected 12-month growth: {formatCurrency(savingsProjection)}.</p>
+          </div>
+          <div className="panel">
+            <h2>Emergency Fund Planner</h2>
+            <label className="input-row">
+              <span>Monthly expenses</span>
+              <input
+                type="number"
+                value={toolkit.emergencyExpenses}
+                onChange={(event) => setToolkit({ ...toolkit, emergencyExpenses: Number(event.target.value) })}
+              />
+            </label>
+            <label className="input-row">
+              <span>Months of safety</span>
+              <input
+                type="number"
+                value={toolkit.emergencyMonths}
+                onChange={(event) => setToolkit({ ...toolkit, emergencyMonths: Number(event.target.value) })}
+              />
+            </label>
+            <p className="muted">Target buffer: {formatCurrency(emergencyTarget)}. This gives you breathing room.</p>
+          </div>
+          <div className="panel">
+            <h2>Expense Cut Simulator</h2>
+            <label className="input-row">
+              <span>Monthly cut</span>
+              <input
+                type="number"
+                value={toolkit.expenseCutAmount}
+                onChange={(event) => setToolkit({ ...toolkit, expenseCutAmount: Number(event.target.value) })}
+              />
+            </label>
+            <p className="muted">
+              One-year impact: {formatCurrency(expenseCutImpact)}. If reinvested, it could feel like {formatCurrency(expenseCutOpportunity)}.
+            </p>
+          </div>
+          <div className="panel">
+            <h2>Income Split Advisor</h2>
+            <label className="input-row">
+              <span>Monthly income</span>
+              <input
+                type="number"
+                value={toolkit.incomeSplitIncome}
+                onChange={(event) => setToolkit({ ...toolkit, incomeSplitIncome: Number(event.target.value) })}
+              />
+            </label>
+            <label className="input-row">
+              <span>Needs %</span>
+              <input
+                type="number"
+                step="0.01"
+                value={toolkit.incomeSplitNeeds}
+                onChange={(event) => setToolkit({ ...toolkit, incomeSplitNeeds: Number(event.target.value) })}
+              />
+            </label>
+            <label className="input-row">
+              <span>Wants %</span>
+              <input
+                type="number"
+                step="0.01"
+                value={toolkit.incomeSplitWants}
+                onChange={(event) => setToolkit({ ...toolkit, incomeSplitWants: Number(event.target.value) })}
+              />
+            </label>
+            <label className="input-row">
+              <span>Savings %</span>
+              <input
+                type="number"
+                step="0.01"
+                value={toolkit.incomeSplitSavings}
+                onChange={(event) => setToolkit({ ...toolkit, incomeSplitSavings: Number(event.target.value) })}
+              />
+            </label>
+            <p className="muted">
+              Needs {formatCurrency(incomeSplitAmounts.needs)}, Wants {formatCurrency(incomeSplitAmounts.wants)}, Savings {formatCurrency(incomeSplitAmounts.savings)}.
+              {Math.abs(incomeSplitTotal - 1) > 0.02 ? " Try to keep totals near 100%." : " This split looks balanced."}
+            </p>
+          </div>
+          <div className="panel">
+            <h2>Loan Affordability Checker</h2>
+            <label className="input-row">
+              <span>Monthly income</span>
+              <input
+                type="number"
+                value={toolkit.loanIncome}
+                onChange={(event) => setToolkit({ ...toolkit, loanIncome: Number(event.target.value) })}
+              />
+            </label>
+            <label className="input-row">
+              <span>EMI amount</span>
+              <input
+                type="number"
+                value={toolkit.loanEmi}
+                onChange={(event) => setToolkit({ ...toolkit, loanEmi: Number(event.target.value) })}
+              />
+            </label>
+            <p className="muted">
+              EMI is {Math.round(loanRatio * 100)}% of income. This feels {loanLabel}.
+            </p>
+          </div>
+          <div className="panel">
+            <h2>Time vs Money Planner</h2>
+            <label className="input-row">
+              <span>Save now (monthly)</span>
+              <input
+                type="number"
+                value={toolkit.timeSaveNow}
+                onChange={(event) => setToolkit({ ...toolkit, timeSaveNow: Number(event.target.value) })}
+              />
+            </label>
+            <label className="input-row">
+              <span>Save later (monthly)</span>
+              <input
+                type="number"
+                value={toolkit.timeSaveLater}
+                onChange={(event) => setToolkit({ ...toolkit, timeSaveLater: Number(event.target.value) })}
+              />
+            </label>
+            <label className="input-row">
+              <span>Delay months</span>
+              <input
+                type="number"
+                value={toolkit.timeDelayMonths}
+                onChange={(event) => setToolkit({ ...toolkit, timeDelayMonths: Number(event.target.value) })}
+              />
+            </label>
+            <p className="muted">
+              Saving now reaches {formatCurrency(saveNowTotal)} in 3 years. Waiting gives {formatCurrency(saveLaterTotal)}. Doing it earlier makes a bigger difference.
+            </p>
+          </div>
+          <div className="panel">
+            <h2>Small Habit Impact</h2>
+            <label className="input-row">
+              <span>Habit cost</span>
+              <input
+                type="number"
+                value={toolkit.habitAmount}
+                onChange={(event) => setToolkit({ ...toolkit, habitAmount: Number(event.target.value) })}
+              />
+            </label>
+            <label className="input-row">
+              <span>Frequency</span>
+              <select
+                value={toolkit.habitFrequency}
+                onChange={(event) => setToolkit({ ...toolkit, habitFrequency: event.target.value })}
+              >
+                <option value="daily">Daily</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </label>
+            <label className="input-row">
+              <span>Years</span>
+              <input
+                type="number"
+                value={toolkit.habitYears}
+                onChange={(event) => setToolkit({ ...toolkit, habitYears: Number(event.target.value) })}
+              />
+            </label>
+            <p className="muted">
+              That habit costs {formatCurrency(habitAnnual)} per year and {formatCurrency(habitMultiYear)} over {toolkit.habitYears} years.
+            </p>
           </div>
         </section>
       )}
