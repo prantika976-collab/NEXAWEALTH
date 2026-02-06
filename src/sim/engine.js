@@ -4,240 +4,288 @@ const MARKET_PRESETS = {
   bear: { label: "Bear market", baseReturn: -0.008 }
 };
 
-const LIFESTYLE_PRESETS = {
-  frugal: { label: "Frugal", variableMultiplier: 0.7, stressRelief: 6 },
-  balanced: { label: "Balanced", variableMultiplier: 1, stressRelief: 2 },
-  comfort: { label: "Comfort", variableMultiplier: 1.25, stressRelief: -2 },
-  luxury: { label: "Luxury", variableMultiplier: 1.55, stressRelief: -6 }
-};
-
-const ALLOCATION_PRESETS = {
-  balanced: { label: "Balanced", saveRate: 0.15, investRate: 0.1, debtRate: 0.08 },
-  debt_crush: { label: "Debt Crush", saveRate: 0.08, investRate: 0.06, debtRate: 0.18 },
-  growth: { label: "Growth", saveRate: 0.1, investRate: 0.18, debtRate: 0.05 },
-  safe: { label: "Safety First", saveRate: 0.2, investRate: 0.06, debtRate: 0.08 }
-};
-
 const RISK_PRESETS = {
   conservative: { label: "Conservative", riskMultiplier: 0.7 },
   moderate: { label: "Moderate", riskMultiplier: 1 },
   aggressive: { label: "Aggressive", riskMultiplier: 1.4 }
 };
 
-const LIFE_EVENTS = [
+const LOCATION_COST = {
+  low: { label: "Low-cost city", multiplier: 0.85 },
+  mid: { label: "Mid-cost city", multiplier: 1 },
+  high: { label: "High-cost city", multiplier: 1.25 }
+};
+
+const LIFE_EVENT_POOL = [
   {
     key: "bonus",
-    label: "Surprise bonus",
-    impact: (state) => ({ cashDelta: 800, stressDelta: -4 })
+    label: "Unexpected bonus",
+    impact: () => ({ cashDelta: 900, stressDelta: -4 })
   },
   {
     key: "medical",
     label: "Medical emergency",
-    impact: () => ({ cashDelta: -1200, stressDelta: 10 })
+    impact: () => ({ cashDelta: -1400, stressDelta: 10 })
   },
   {
-    key: "job_loss",
-    label: "Temporary job loss",
-    impact: (state) => ({ incomeMultiplier: 0.7, stressDelta: 12 })
+    key: "salary_delay",
+    label: "Salary delay",
+    impact: () => ({ incomeMultiplier: 0.7, stressDelta: 8 })
   },
   {
-    key: "promotion",
-    label: "Promotion unlocked",
-    impact: () => ({ incomeMultiplier: 1.08, stressDelta: -5 })
+    key: "market_crash",
+    label: "Market dip",
+    impact: () => ({ marketShock: -0.03, stressDelta: 6 })
   },
   {
-    key: "inflation",
-    label: "Inflation spike",
-    impact: () => ({ expenseMultiplier: 1.08, stressDelta: 6 })
+    key: "rent_hike",
+    label: "Rent hike",
+    impact: () => ({ fixedCostDelta: 120, stressDelta: 4 })
+  },
+  {
+    key: "family_need",
+    label: "Family obligation",
+    impact: () => ({ cashDelta: -500, stressDelta: 6 })
   }
 ];
 
-const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
-
 export const marketPresets = MARKET_PRESETS;
-export const lifestylePresets = LIFESTYLE_PRESETS;
-export const allocationPresets = ALLOCATION_PRESETS;
 export const riskPresets = RISK_PRESETS;
 
-export const scenarioPresets = {
-  student: {
-    label: "College student",
-    income: 1400,
-    fixedExpenses: 600,
-    startingCash: 300,
-    startingSavings: 500,
-    startingInvestments: 200,
-    debtBalance: 6000,
-    debtRate: 0.08,
-    goal: "Build a safety buffer while paying down student debt.",
-    riskNote: "Income is limited, so stability matters most."
-  },
-  first_job: {
-    label: "First job professional",
-    income: 5200,
-    fixedExpenses: 2100,
-    startingCash: 1200,
-    startingSavings: 3000,
-    startingInvestments: 2500,
-    debtBalance: 12000,
-    debtRate: 0.12,
-    goal: "Balance loan repayment with early investing.",
-    riskNote: "Credit score and runway unlock better options."
-  },
-  freelancer: {
-    label: "Freelancer",
-    income: 4200,
-    fixedExpenses: 1800,
-    startingCash: 900,
-    startingSavings: 2600,
-    startingInvestments: 1400,
-    debtBalance: 4000,
-    debtRate: 0.1,
-    goal: "Build cash resilience for income swings.",
-    riskNote: "Income volatility can spike stress quickly."
-  },
-  family: {
-    label: "Family with dependents",
-    income: 7800,
-    fixedExpenses: 3200,
-    startingCash: 2000,
-    startingSavings: 4500,
-    startingInvestments: 4000,
-    debtBalance: 24000,
-    debtRate: 0.11,
-    goal: "Protect the household and fund long-term goals.",
-    riskNote: "Emergencies have larger impact on stability."
-  },
-  entrepreneur: {
-    label: "Entrepreneur",
-    income: 6200,
-    fixedExpenses: 2500,
-    startingCash: 1600,
-    startingSavings: 2200,
-    startingInvestments: 3600,
-    debtBalance: 18000,
-    debtRate: 0.14,
-    goal: "Invest in growth while protecting cashflow.",
-    riskNote: "Market swings amplify business outcomes."
-  },
-  retiree: {
-    label: "Retired individual",
-    income: 3800,
-    fixedExpenses: 1900,
-    startingCash: 3800,
-    startingSavings: 18000,
-    startingInvestments: 32000,
-    debtBalance: 2000,
-    debtRate: 0.05,
-    goal: "Preserve capital and reduce stress.",
-    riskNote: "Conservative allocations keep runway stable."
-  }
+export const expenseCatalog = {
+  food: [
+    { key: "home_meals", label: "Home-cooked meals", priceRange: [1.2, 3.2], unit: "meal" },
+    { key: "eating_out", label: "Eating out", priceRange: [4.5, 12], unit: "meal" },
+    { key: "snacks", label: "Snacks / instant food", priceRange: [0.8, 2.5], unit: "item" }
+  ],
+  housing: [
+    { key: "rent", label: "Rent", priceRange: [220, 680], unit: "month" },
+    { key: "maintenance", label: "Maintenance", priceRange: [20, 90], unit: "month" },
+    { key: "utilities", label: "Utilities (electricity/water/internet)", priceRange: [45, 160], unit: "month" }
+  ],
+  health: [
+    { key: "gym", label: "Gym membership", priceRange: [12, 45], unit: "month" },
+    { key: "doctor", label: "Doctor visits", priceRange: [18, 60], unit: "visit" },
+    { key: "medicines", label: "Medicines", priceRange: [8, 35], unit: "set" }
+  ],
+  subscriptions: [
+    { key: "streaming", label: "Streaming apps", priceRange: [6, 18], unit: "month" },
+    { key: "productivity", label: "Productivity apps", priceRange: [6, 20], unit: "month" },
+    { key: "cloud", label: "Cloud storage", priceRange: [3, 12], unit: "month" }
+  ],
+  transport: [
+    { key: "fuel", label: "Fuel", priceRange: [18, 120], unit: "month" },
+    { key: "public_transport", label: "Public transport", priceRange: [18, 90], unit: "month" },
+    { key: "ride_hailing", label: "Ride-hailing", priceRange: [6, 45], unit: "ride" }
+  ],
+  lifestyle: [
+    { key: "shopping", label: "Shopping", priceRange: [20, 140], unit: "month" },
+    { key: "entertainment", label: "Entertainment", priceRange: [12, 70], unit: "month" },
+    { key: "travel", label: "Travel", priceRange: [0, 180], unit: "month" }
+  ],
+  education: [
+    { key: "courses", label: "Courses", priceRange: [15, 160], unit: "month" },
+    { key: "books", label: "Books", priceRange: [5, 40], unit: "month" },
+    { key: "exam_fees", label: "Exam fees", priceRange: [0, 120], unit: "month" }
+  ]
+};
+
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+const pick = (items) => items[Math.floor(Math.random() * items.length)];
+
+const baseLifeStages = [
+  { label: "School student", incomeRange: [200, 600], stability: "low" },
+  { label: "College student", incomeRange: [600, 1800], stability: "low" },
+  { label: "First job professional", incomeRange: [2800, 5200], stability: "medium" },
+  { label: "Freelancer", incomeRange: [2000, 5200], stability: "low" },
+  { label: "Family with dependents", incomeRange: [5200, 9000], stability: "medium" },
+  { label: "Entrepreneur", incomeRange: [3500, 8200], stability: "medium" },
+  { label: "Retired individual", incomeRange: [1800, 4200], stability: "high" }
+];
+
+const debtTypes = [
+  { label: "Education loan", rate: 0.08 },
+  { label: "Credit card", rate: 0.24 },
+  { label: "Personal loan", rate: 0.14 },
+  { label: "Vehicle loan", rate: 0.11 }
+];
+
+const makeDebt = (maxBalance) => {
+  const debtType = pick(debtTypes);
+  const balance = Math.round((Math.random() * 0.6 + 0.2) * maxBalance);
+  return {
+    type: debtType.label,
+    balance,
+    rate: debtType.rate,
+    minimumDue: Math.max(20, Math.round(balance * 0.04))
+  };
+};
+
+export function generateLifeStage() {
+  const base = pick(baseLifeStages);
+  const location = pick(Object.keys(LOCATION_COST));
+  const age = Math.round(16 + Math.random() * 40);
+  const dependents = base.label.includes("Family") ? 2 + Math.floor(Math.random() * 2) : Math.random() < 0.2 ? 1 : 0;
+  const income = Math.round(
+    (base.incomeRange[0] + Math.random() * (base.incomeRange[1] - base.incomeRange[0])) *
+      LOCATION_COST[location].multiplier
+  );
+  const debtCount = Math.random() < 0.6 ? 1 : Math.random() < 0.8 ? 2 : 0;
+  const debts = Array.from({ length: debtCount }, () => makeDebt(income * 6));
+
+  return {
+    id: `${Date.now()}-${Math.round(Math.random() * 10000)}`,
+    label: base.label,
+    age,
+    stability: base.stability,
+    location,
+    dependents,
+    income,
+    fixedCosts: {
+      housing: Math.round(LOCATION_COST[location].multiplier * (income * 0.28)),
+      utilities: Math.round(LOCATION_COST[location].multiplier * 120)
+    },
+    debts,
+    assets: Math.round(Math.max(0, income * (Math.random() * 0.6)))
+  };
+}
+
+export const defaultDecision = {
+  marketMode: "neutral",
+  riskProfile: "moderate",
+  debtPayment: 0,
+  investment: 0,
+  emergencyCash: 0
 };
 
 export const defaultState = {
   month: 1,
-  cashOnHand: 1200,
-  savings: 3000,
-  investments: 2500,
-  debtBalance: 12000,
-  stressLevel: 35,
-  creditScore: 690,
+  cashOnHand: 1000,
+  savings: 2000,
+  investments: 2000,
+  debtBalance: 0,
+  debts: [],
+  stressLevel: 40,
+  creditScore: 680,
   history: []
 };
 
-export const defaultDecision = {
-  lifestyle: "balanced",
-  allocation: "balanced",
-  debtStrategy: "minimum",
-  riskProfile: "moderate",
-  marketMode: "neutral"
-};
+export function buildExpensePlan(lifeStage) {
+  const quantities = {};
+  const priceTiers = {};
+  Object.values(expenseCatalog).flat().forEach((item) => {
+    const baseQty = item.key === "home_meals" ? 24 : item.key === "eating_out" ? 6 : item.unit === "month" ? 1 : 2;
+    const multiplier = lifeStage.label.includes("Student") ? 0.8 : lifeStage.label.includes("Family") ? 1.2 : 1;
+    quantities[item.key] = Math.round(baseQty * multiplier);
+    priceTiers[item.key] = "typical";
+  });
+  return { quantities, priceTiers };
+}
 
-const computeStress = ({ cashOnHand, debtBalance, expenses, lifestyle }) => {
+export function resolveItemPrice(item, tier, locationMultiplier) {
+  const [min, max] = item.priceRange;
+  const price = tier === "low" ? min : tier === "high" ? max : (min + max) / 2;
+  return price * locationMultiplier;
+}
+
+export function calculateExpenses({ lifeStage, quantities, priceTiers }) {
+  const locationMultiplier = LOCATION_COST[lifeStage.location].multiplier;
+  const items = [];
+  let variableTotal = 0;
+  Object.entries(expenseCatalog).forEach(([category, entries]) => {
+    entries.forEach((item) => {
+      const qty = quantities[item.key] ?? 0;
+      const tier = priceTiers[item.key] ?? "typical";
+      const price = resolveItemPrice(item, tier, locationMultiplier);
+      const cost = qty * price;
+      if (cost > 0) {
+        items.push({
+          category,
+          key: item.key,
+          label: item.label,
+          qty,
+          unit: item.unit,
+          price,
+          cost
+        });
+        variableTotal += cost;
+      }
+    });
+  });
+
+  const fixedTotal = lifeStage.fixedCosts.housing + lifeStage.fixedCosts.utilities;
+  return { items, variableTotal, fixedTotal, total: fixedTotal + variableTotal };
+}
+
+const computeStress = ({ cashOnHand, expenses, debtBalance }) => {
   const safetyBuffer = cashOnHand / Math.max(expenses, 1);
   const debtLoad = debtBalance / 25000;
-  const lifestyleRelief = LIFESTYLE_PRESETS[lifestyle]?.stressRelief ?? 0;
-  const raw = 60 - safetyBuffer * 18 + debtLoad * 26 - lifestyleRelief;
+  const raw = 62 - safetyBuffer * 18 + debtLoad * 28;
   return clamp(Math.round(raw), 5, 95);
 };
 
-const updateCredit = ({ debtPayment, debtBalance, missed }) => {
-  if (missed) return -18;
-  if (debtPayment > 0 && debtBalance > 0) return 6;
+const updateCredit = ({ missed, utilization }) => {
+  if (missed) return -20;
+  if (utilization > 0.6) return -6;
+  if (utilization < 0.3) return 6;
   return 2;
 };
 
-const getLifeEvent = () => {
-  const roll = Math.random();
-  if (roll < 0.18) {
-    return LIFE_EVENTS[Math.floor(Math.random() * LIFE_EVENTS.length)];
+const pickLifeEvent = (lastEventKey) => {
+  const available = LIFE_EVENT_POOL.filter((event) => event.key !== lastEventKey);
+  if (Math.random() < 0.22) {
+    return pick(available);
   }
   return null;
 };
 
-export function hydrateScenario(key) {
-  const scenario = scenarioPresets[key] ?? scenarioPresets.first_job;
-  return {
-    scenarioKey: key,
-    profile: scenario,
-    state: {
-      month: 1,
-      cashOnHand: scenario.startingCash,
-      savings: scenario.startingSavings,
-      investments: scenario.startingInvestments,
-      debtBalance: scenario.debtBalance,
-      stressLevel: 35,
-      creditScore: 690,
-      history: []
-    }
-  };
-}
-
-export function runDecisionCycle({ scenario, decision, state }) {
-  const market = MARKET_PRESETS[decision.marketMode] ?? MARKET_PRESETS.neutral;
-  const allocation = ALLOCATION_PRESETS[decision.allocation] ?? ALLOCATION_PRESETS.balanced;
-  const lifestyle = LIFESTYLE_PRESETS[decision.lifestyle] ?? LIFESTYLE_PRESETS.balanced;
-  const risk = RISK_PRESETS[decision.riskProfile] ?? RISK_PRESETS.moderate;
-
-  const event = getLifeEvent();
-  const eventImpact = event ? event.impact(state) : {};
-  const incomeMultiplier = eventImpact.incomeMultiplier ?? 1;
-  const expenseMultiplier = eventImpact.expenseMultiplier ?? 1;
-
-  const income = scenario.income * incomeMultiplier;
-  const fixedExpenses = scenario.fixedExpenses * expenseMultiplier;
-  const variableExpenses = scenario.fixedExpenses * 0.55 * lifestyle.variableMultiplier;
-  const expenses = fixedExpenses + variableExpenses;
-
-  const baseDebtPayment = income * allocation.debtRate;
-  const debtPayment = decision.debtStrategy === "aggressive" ? baseDebtPayment * 1.5 : baseDebtPayment * 0.8;
-  const savingsContribution = income * allocation.saveRate;
-  const investmentContribution = income * allocation.investRate;
-
-  const marketReturn = market.baseReturn * risk.riskMultiplier + (Math.random() - 0.5) * 0.01;
-  const debtInterest = state.debtBalance * (scenario.debtRate / 12);
-
-  const outflow = expenses + debtPayment + savingsContribution + investmentContribution;
-  const cashDelta = income - outflow + (eventImpact.cashDelta ?? 0);
-  const missedPayment = cashDelta < -250;
-
-  const nextCash = state.cashOnHand + cashDelta;
-  const nextSavings = state.savings + savingsContribution;
-  const nextInvestments = (state.investments + investmentContribution) * (1 + marketReturn);
-  const nextDebt = clamp(state.debtBalance + debtInterest - debtPayment, 0, 1e9);
-
-  const netWorth = nextCash + nextSavings + nextInvestments - nextDebt;
-  const stressLevel = computeStress({
-    cashOnHand: nextCash,
-    debtBalance: nextDebt,
-    expenses,
-    lifestyle: decision.lifestyle
+const allocateDebtPayment = (debts, payment) => {
+  const sorted = [...debts].sort((a, b) => b.rate - a.rate);
+  let remaining = payment;
+  const updated = sorted.map((debt) => {
+    const interest = debt.balance * (debt.rate / 12);
+    const minimum = Math.min(debt.minimumDue, debt.balance + interest);
+    const paid = Math.min(remaining, minimum + Math.max(0, remaining - minimum));
+    remaining -= paid;
+    const nextBalance = clamp(debt.balance + interest - paid, 0, 1e9);
+    return { ...debt, balance: nextBalance };
   });
-  const creditScore = clamp(
-    state.creditScore + updateCredit({ debtPayment, debtBalance: nextDebt, missed: missedPayment }),
-    420,
-    850
-  );
+  const missed = payment < debts.reduce((sum, debt) => sum + debt.minimumDue, 0) * 0.9;
+  return { updated: updated.sort((a, b) => a.rate - b.rate), missed };
+};
+
+export function runDecisionCycle({ lifeStage, decision, expenses, state }) {
+  const market = MARKET_PRESETS[decision.marketMode] ?? MARKET_PRESETS.neutral;
+  const risk = RISK_PRESETS[decision.riskProfile] ?? RISK_PRESETS.moderate;
+  const lastEventKey = state.history.at(-1)?.eventKey ?? null;
+  const lifeEvent = pickLifeEvent(lastEventKey);
+  const eventImpact = lifeEvent ? lifeEvent.impact() : {};
+
+  const incomeMultiplier = eventImpact.incomeMultiplier ?? 1;
+  const income = lifeStage.income * incomeMultiplier;
+  const expenseTotal = expenses.total + (eventImpact.fixedCostDelta ?? 0);
+
+  const debtPayment = decision.debtPayment;
+  const savingsContribution = decision.emergencyCash;
+  const investmentContribution = decision.investment;
+
+  const outflow = expenseTotal + debtPayment + savingsContribution + investmentContribution;
+  const cashDelta = income - outflow + (eventImpact.cashDelta ?? 0);
+  const nextCash = state.cashOnHand + cashDelta;
+
+  const debtState = allocateDebtPayment(state.debts, debtPayment);
+  const nextSavings = state.savings + savingsContribution;
+
+  const marketReturn = market.baseReturn * risk.riskMultiplier + (Math.random() - 0.5) * 0.012 + (eventImpact.marketShock ?? 0);
+  const nextInvestments = (state.investments + investmentContribution) * (1 + marketReturn);
+  const totalDebt = debtState.updated.reduce((sum, debt) => sum + debt.balance, 0);
+  const netWorth = nextCash + nextSavings + nextInvestments - totalDebt;
+  const creditLimit = Math.max(totalDebt * 1.4, 1);
+  const utilization = totalDebt / creditLimit;
+  const creditScore = clamp(state.creditScore + updateCredit({ missed: debtState.missed, utilization }), 420, 850);
+
+  const stressLevel = computeStress({ cashOnHand: nextCash, expenses: expenseTotal, debtBalance: totalDebt });
 
   const snapshot = {
     month: state.month,
@@ -245,14 +293,14 @@ export function runDecisionCycle({ scenario, decision, state }) {
     cashOnHand: Math.round(nextCash),
     savings: Math.round(nextSavings),
     investments: Math.round(nextInvestments),
-    debtBalance: Math.round(nextDebt),
+    debtBalance: Math.round(totalDebt),
     stressLevel,
     creditScore,
-    expenses: Math.round(expenses),
+    expenses: Math.round(expenseTotal),
     income: Math.round(income),
     marketReturn,
-    decision: { ...decision },
-    event: event?.label ?? "Quiet month"
+    event: lifeEvent?.label ?? "Quiet month",
+    eventKey: lifeEvent?.key ?? "none"
   };
 
   const history = [...state.history, snapshot].slice(-72);
@@ -262,18 +310,19 @@ export function runDecisionCycle({ scenario, decision, state }) {
     cashOnHand: nextCash,
     savings: nextSavings,
     investments: nextInvestments,
-    debtBalance: nextDebt,
+    debtBalance: totalDebt,
+    debts: debtState.updated,
     stressLevel,
     creditScore,
     history
   };
 }
 
-export function projectFuture({ scenario, decision, state }, months = 12) {
+export function projectFuture({ lifeStage, decision, expenses, state }, months = 12) {
   let projectionState = { ...state };
   const points = [];
   for (let i = 0; i < months; i += 1) {
-    projectionState = runDecisionCycle({ scenario, decision, state: projectionState });
+    projectionState = runDecisionCycle({ lifeStage, decision, expenses, state: projectionState });
     const latest = projectionState.history.at(-1);
     points.push({
       month: state.month + i,
@@ -285,52 +334,19 @@ export function projectFuture({ scenario, decision, state }, months = 12) {
   return points;
 }
 
-export function summarizeFeedback(snapshot) {
+export function summarizeFeedback(snapshot, allocations) {
   const messages = [];
-  if (snapshot.netWorth > 0) {
-    messages.push("Your net worth moved into positive territory this cycle.");
-  }
-  if (snapshot.debtBalance > 0 && snapshot.debtBalance < 5000) {
-    messages.push("Debt is under control. You are close to a clean slate.");
-  }
-  if (snapshot.stressLevel > 70) {
-    messages.push("Stress is high. Reduce variable expenses or build a larger buffer.");
+  messages.push(`You earned ${snapshot.income} and spent ${snapshot.expenses} this month.`);
+  if (allocations.debtPayment > 0) {
+    messages.push(`You put ${allocations.debtPayment} toward debt. Small extra payments compound.`);
   }
   if (snapshot.marketReturn < 0) {
-    messages.push("The market dipped. Short-term pain, but long-term compounding still works.");
+    messages.push("Markets dipped this month. Staying consistent builds resilience.");
   }
-  if (snapshot.savings > 8000) {
-    messages.push("Emergency runway is growing, which improves stability.");
-  }
-  if (snapshot.event && snapshot.event !== "Quiet month") {
-    messages.push(`Life event: ${snapshot.event}. Adapt quickly to stay on track.`);
+  if (snapshot.stressLevel > 70) {
+    messages.push("Stress is high. Tighten variable spending or hold more cash.");
   }
   return messages.slice(0, 3);
-}
-
-export function analyzeBehavior(history) {
-  if (history.length === 0) {
-    return {
-      risk: "Balanced",
-      mindset: "Exploring",
-      tendency: "Undetermined",
-      suggestion: "Run a few cycles to reveal your patterns."
-    };
-  }
-  const avgStress = history.reduce((sum, item) => sum + item.stressLevel, 0) / history.length;
-  const avgInvest = history.reduce((sum, item) => sum + item.investments, 0) / history.length;
-  const avgDebt = history.reduce((sum, item) => sum + item.debtBalance, 0) / history.length;
-
-  const risk = avgInvest > avgDebt ? "Growth leaning" : "Cautious";
-  const mindset = avgStress > 60 ? "Short-term pressure" : "Long-term builder";
-  const tendency = avgDebt > 15000 ? "Debt-focused" : "Savings-focused";
-
-  return {
-    risk,
-    mindset,
-    tendency,
-    suggestion: "Try the Decision Lab for one focused trade-off or explore Market Explorer to test risk comfort."
-  };
 }
 
 
