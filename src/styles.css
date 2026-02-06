@@ -178,28 +178,6 @@ button.ghost {
   gap: 8px;
 }
 
-.scenario-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 14px;
-  margin-top: 16px;
-}
-
-.scenario-card {
-  text-align: left;
-  padding: 16px;
-  border-radius: 16px;
-  background: rgba(14, 20, 50, 0.9);
-  border: 1px solid rgba(120, 140, 255, 0.2);
-}
-
-.scenario-card span {
-  display: block;
-  margin-top: 8px;
-  color: #9aa6dd;
-  font-size: 0.85rem;
-}
-
 .metrics {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -212,29 +190,84 @@ button.ghost {
   color: #9aa6dd;
 }
 
-.bar-chart {
-  display: flex;
-  gap: 16px;
-  align-items: flex-end;
-  height: 140px;
-  margin: 16px 0;
+.debt-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
 }
 
-.bar-chart div {
-  flex: 1;
-  text-align: center;
-}
-
-.bar-chart span {
+.debt-list span {
   display: block;
-  width: 100%;
-  border-radius: 12px 12px 0 0;
-  background: linear-gradient(180deg, #4d7bff, #40f0ff);
+  color: #9aa6dd;
+  font-size: 0.85rem;
 }
 
-.bar-chart p {
-  margin-top: 8px;
-  color: #98a4ff;
+.expense-grid {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.expense-category {
+  border: 1px solid rgba(120, 140, 255, 0.2);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(10, 14, 33, 0.6);
+}
+
+.expense-category h3 {
+  margin: 0 0 10px;
+  text-transform: capitalize;
+}
+
+.expense-item {
+  display: grid;
+  grid-template-columns: 1.4fr 1.2fr 0.6fr;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(120, 140, 255, 0.12);
+}
+
+.expense-item:last-child {
+  border-bottom: none;
+}
+
+.expense-item span {
+  color: #9aa6dd;
+  font-size: 0.85rem;
+}
+
+.expense-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.expense-controls select {
+  background: rgba(7, 11, 29, 0.9);
+  border: 1px solid rgba(120, 140, 255, 0.2);
+  border-radius: 10px;
+  color: inherit;
+  padding: 4px 8px;
+}
+
+.expense-cost {
+  text-align: right;
+  font-weight: 600;
+}
+
+.spend-safe {
+  color: #7cffc4;
+}
+
+.spend-tight {
+  color: #ffd27c;
+}
+
+.spend-risky {
+  color: #ff9a9a;
 }
 
 .muted {
@@ -282,6 +315,15 @@ footer {
   text-align: center;
   color: #8793d8;
   font-size: 0.85rem;
+}
+
+@media (max-width: 900px) {
+  .expense-item {
+    grid-template-columns: 1fr;
+  }
+  .expense-cost {
+    text-align: left;
+  }
 }
 
 @media (max-width: 720px) {
