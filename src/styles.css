@@ -190,6 +190,51 @@ button.ghost {
   color: #9aa6dd;
 }
 
+.market-list {
+  display: grid;
+  gap: 12px;
+}
+
+.market-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(120, 140, 255, 0.2);
+  background: rgba(10, 14, 33, 0.6);
+}
+
+.market-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.trend {
+  font-weight: 600;
+}
+
+.trend-up {
+  color: #7cffc4;
+}
+
+.trend-down {
+  color: #ff9a9a;
+}
+
+.trend-flat {
+  color: #ffd27c;
+}
+
+.ledger-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
 .debt-list {
   display: grid;
   gap: 12px;
