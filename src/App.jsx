@@ -160,6 +160,73 @@ const decisionLabTemplates = [
   }
 ];
 
+const futureCaseTemplates = {
+  salary: [
+    {
+      label: "Save ₹10 daily",
+      description: "Small habit, big quiet impact. Delivery fees and taxes add up too.",
+      delta: { emergencyCash: 120 },
+      tone: "This feels harmless now, but compounds quietly."
+    },
+    {
+      label: "Upgrade phone on EMI",
+      description: "EMI adds interest + GST. Convenience feels good, flexibility shrinks.",
+      delta: { debtPayment: 80, investment: -60 },
+      tone: "Comfort rises early, but flexibility fades later."
+    },
+    {
+      label: "New job with higher salary, higher rent",
+      description: "Salary jumps, but rent + commute quietly rise with it.",
+      delta: { investment: 140, emergencyCash: -80 },
+      tone: "Growth is real, but costs travel with it."
+    },
+    {
+      label: "Subscription creep",
+      description: "Five small subscriptions, plus taxes. It leaks monthly momentum.",
+      delta: { investment: -90, emergencyCash: -40 },
+      tone: "You gain convenience, but savings slow."
+    },
+    {
+      label: "Emergency expense shock",
+      description: "Unexpected repair + service fee. Cash buffer protects peace of mind.",
+      delta: { emergencyCash: 180, investment: -140 },
+      tone: "Short-term pain, long-term stability."
+    }
+  ],
+  market: [
+    {
+      label: "Invest in local business",
+      description: "Higher upside, but demand can dip suddenly.",
+      delta: { investment: 220, emergencyCash: -80, riskProfile: "aggressive" },
+      tone: "Risk paid off — this time."
+    },
+    {
+      label: "Buy wholesale, sell retail",
+      description: "Margin looks good, but storage + spoilage fees bite.",
+      delta: { investment: 140, emergencyCash: -60 },
+      tone: "Profit exists, but timing is everything."
+    },
+    {
+      label: "Hold through a market dip",
+      description: "Volatility hurts now, recovery helps later.",
+      delta: { investment: 180, riskProfile: "moderate" },
+      tone: "You stay calm and let time work."
+    },
+    {
+      label: "Exit early to lock gains",
+      description: "You avoid the drawdown, but miss the bigger climb.",
+      delta: { investment: -120, emergencyCash: 100, riskProfile: "conservative" },
+      tone: "Safety first, growth later."
+    },
+    {
+      label: "Reinvest profits",
+      description: "Platform fees reduce take-home, but compounding accelerates.",
+      delta: { investment: 260, emergencyCash: -120, riskProfile: "aggressive" },
+      tone: "Momentum builds, stress rises slightly."
+    }
+  ]
+};
+
 const decisionLabAmounts = {
   small: { min: 5, max: 180, horizon: "daily" },
   medium: { min: 200, max: 3000, horizon: "monthly" },
@@ -435,6 +502,26 @@ const findMarketItemLabel = (itemKey) => {
   return itemKey;
 };
 
+const buildFutureCase = (path) => {
+  const pool = futureCaseTemplates[path];
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  const impact = {
+    debtPayment: Math.max(0, (pick.delta.debtPayment ?? 0)),
+    investment: pick.delta.investment ?? 0,
+    emergencyCash: pick.delta.emergencyCash ?? 0,
+    riskProfile: pick.delta.riskProfile
+  };
+  return { id: `${path}-${Date.now()}`, ...pick, impact };
+};
+
+const applyDecisionDelta = (decision, impact) => ({
+  ...decision,
+  debtPayment: Math.max(0, decision.debtPayment + (impact.debtPayment ?? 0)),
+  investment: Math.max(0, decision.investment + (impact.investment ?? 0)),
+  emergencyCash: Math.max(0, decision.emergencyCash + (impact.emergencyCash ?? 0)),
+  riskProfile: impact.riskProfile ?? decision.riskProfile
+});
+
 const bankAllocationDefaults = {
   savings: 0.3,
   emergency: 0.25,
@@ -486,7 +573,10 @@ export default function App() {
     habitYears: 3
   });
   const [banking, setBanking] = useState(bankAllocationDefaults);
-  const [timelineDecision, setTimelineDecision] = useState({ ...defaultDecision, investment: 500 });
+  const [salaryCase, setSalaryCase] = useState(() => buildFutureCase("salary"));
+  const [marketCase, setMarketCase] = useState(() => buildFutureCase("market"));
+  const [salaryChoice, setSalaryChoice] = useState("current");
+  const [marketChoice, setMarketChoice] = useState("current");
 
   const expenses = useMemo(
     () => calculateExpenses({ lifeStage, quantities: expensePlan.quantities, priceTiers: expensePlan.priceTiers }),
@@ -576,9 +666,15 @@ export default function App() {
     () => projectFuture({ lifeStage, decision, expenses, state: simulationState }, 60),
     [lifeStage, decision, expenses, simulationState]
   );
-  const timelineAlt = useMemo(
-    () => projectFuture({ lifeStage, decision: timelineDecision, expenses, state: simulationState }, 60),
-    [lifeStage, timelineDecision, expenses, simulationState]
+  const salaryDecision = salaryChoice === "case" ? applyDecisionDelta(decision, salaryCase.impact) : decision;
+  const marketDecision = marketChoice === "case" ? applyDecisionDelta(decision, marketCase.impact) : decision;
+  const salaryTimelineAlt = useMemo(
+    () => projectFuture({ lifeStage, decision: salaryDecision, expenses, state: simulationState }, 60),
+    [lifeStage, salaryDecision, expenses, simulationState]
+  );
+  const marketTimelineAlt = useMemo(
+    () => projectFuture({ lifeStage, decision: marketDecision, expenses, state: simulationState }, 60),
+    [lifeStage, marketDecision, expenses, simulationState]
   );
 
   const marketPoints = useMemo(() => {
@@ -1379,30 +1475,64 @@ export default function App() {
       {activeMode === "timeline" && (
         <section className="grid">
           <div className="panel">
-            <h2>Future Self Timeline</h2>
-            <p className="muted">Compare your current decisions with an alternate choice.</p>
-            <label className="input-row">
-              <span>Alternate investment</span>
-              <input
-                type="number"
-                value={timelineDecision.investment}
-                onChange={(event) => setTimelineDecision({ ...timelineDecision, investment: Number(event.target.value) })}
-              />
-            </label>
-            <label className="input-row">
-              <span>Alternate debt payment</span>
-              <input
-                type="number"
-                value={timelineDecision.debtPayment}
-                onChange={(event) => setTimelineDecision({ ...timelineDecision, debtPayment: Number(event.target.value) })}
-              />
-            </label>
+            <h2>Salary / Stable Income Path</h2>
+            <p className="muted">{salaryCase.description}</p>
+            <div className="metrics">
+              <div>
+                <p>Case</p>
+                <strong>{salaryCase.label}</strong>
+              </div>
+              <div>
+                <p>Feeling</p>
+                <strong>{salaryCase.tone}</strong>
+              </div>
+            </div>
+            <div className="choice-buttons">
+              <button className={salaryChoice === "current" ? "active" : ""} onClick={() => setSalaryChoice("current")}>
+                Stay current
+              </button>
+              <button className={salaryChoice === "case" ? "active" : ""} onClick={() => setSalaryChoice("case")}>
+                Choose this path
+              </button>
+              <button className="ghost" onClick={() => { setSalaryCase(buildFutureCase("salary")); setSalaryChoice("current"); }}>
+                New case
+              </button>
+            </div>
+            <div className="chart-block">
+              <LineChart points={timelineNow} height={140} />
+              <LineChart points={salaryTimelineAlt} height={140} valueKey="netWorth" />
+              <p className="muted">Current vs alternate salary path over 60 months.</p>
+            </div>
           </div>
           <div className="panel">
-            <h2>60-month projection</h2>
-            <LineChart points={timelineNow} height={140} />
-            <LineChart points={timelineAlt} height={140} valueKey="netWorth" />
-            <p className="muted">Top line is current path. Bottom line is your alternate choice.</p>
+            <h2>Market / Business / Investment Path</h2>
+            <p className="muted">{marketCase.description}</p>
+            <div className="metrics">
+              <div>
+                <p>Case</p>
+                <strong>{marketCase.label}</strong>
+              </div>
+              <div>
+                <p>Feeling</p>
+                <strong>{marketCase.tone}</strong>
+              </div>
+            </div>
+            <div className="choice-buttons">
+              <button className={marketChoice === "current" ? "active" : ""} onClick={() => setMarketChoice("current")}>
+                Stay current
+              </button>
+              <button className={marketChoice === "case" ? "active" : ""} onClick={() => setMarketChoice("case")}>
+                Choose this path
+              </button>
+              <button className="ghost" onClick={() => { setMarketCase(buildFutureCase("market")); setMarketChoice("current"); }}>
+                New case
+              </button>
+            </div>
+            <div className="chart-block">
+              <LineChart points={timelineNow} height={140} />
+              <LineChart points={marketTimelineAlt} height={140} valueKey="netWorth" />
+              <p className="muted">Current vs alternate market path over 60 months.</p>
+            </div>
           </div>
         </section>
       )}
