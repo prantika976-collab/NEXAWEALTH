@@ -210,6 +210,231 @@ const generateDecisionLabScenario = (difficulty = "mixed") => {
   };
 };
 
+const marketDefinitions = [
+  {
+    key: "stocks",
+    label: "Stock Exchange",
+    category: "Financial Markets",
+    description: "Established companies with steady demand.",
+    items: [
+      { key: "atlas_tech", label: "Atlas Tech", base: 120, volatility: 0.06, risk: "Medium", type: "asset" },
+      { key: "harbor_health", label: "Harbor Health", base: 84, volatility: 0.04, risk: "Low", type: "asset" },
+      { key: "nova_energy", label: "Nova Energy", base: 96, volatility: 0.08, risk: "Medium", type: "asset" }
+    ]
+  },
+  {
+    key: "funds",
+    label: "Mutual Funds & ETFs",
+    category: "Financial Markets",
+    description: "Diversified baskets with smoother swings.",
+    items: [
+      { key: "city_index", label: "City Index ETF", base: 60, volatility: 0.03, risk: "Low", type: "asset" },
+      { key: "growth_fund", label: "Growth Mutual Fund", base: 75, volatility: 0.05, risk: "Medium", type: "asset" },
+      { key: "green_future", label: "Green Future ETF", base: 68, volatility: 0.04, risk: "Low", type: "asset" }
+    ]
+  },
+  {
+    key: "bonds",
+    label: "Bonds & Fixed Income",
+    category: "Financial Markets",
+    description: "Lower risk, slower movement.",
+    items: [
+      { key: "city_bond", label: "City Bond", base: 40, volatility: 0.02, risk: "Low", type: "asset" },
+      { key: "infrastructure_note", label: "Infrastructure Note", base: 52, volatility: 0.02, risk: "Low", type: "asset" }
+    ]
+  },
+  {
+    key: "crypto",
+    label: "Crypto Market",
+    category: "Financial Markets",
+    description: "High volatility, sentiment-driven.",
+    items: [
+      { key: "pulse_coin", label: "Pulse Coin", base: 28, volatility: 0.15, risk: "High", type: "asset" },
+      { key: "zen_chain", label: "Zen Chain", base: 42, volatility: 0.2, risk: "High", type: "asset" }
+    ]
+  },
+  {
+    key: "wholesale",
+    label: "Wholesale Market",
+    category: "Business & Trade",
+    description: "Buy bulk goods at lower unit prices.",
+    items: [
+      { key: "rice_bulk", label: "Rice sack", base: 22, volatility: 0.06, risk: "Low", type: "goods" },
+      { key: "spice_crate", label: "Spice crate", base: 34, volatility: 0.07, risk: "Medium", type: "goods" },
+      { key: "fabric_roll", label: "Fabric roll", base: 48, volatility: 0.08, risk: "Medium", type: "goods" }
+    ]
+  },
+  {
+    key: "retail",
+    label: "Retail Bazaar",
+    category: "Business & Trade",
+    description: "Higher prices, higher margins.",
+    items: [
+      { key: "rice_bulk", label: "Rice sack", base: 32, volatility: 0.05, risk: "Low", type: "goods" },
+      { key: "spice_crate", label: "Spice crate", base: 44, volatility: 0.06, risk: "Medium", type: "goods" },
+      { key: "handmade_items", label: "Handmade crafts", base: 55, volatility: 0.1, risk: "Medium", type: "goods" }
+    ]
+  },
+  {
+    key: "home_business",
+    label: "Home Business Hub",
+    category: "Business & Trade",
+    description: "Price your own services and small goods.",
+    items: [
+      { key: "meal_boxes", label: "Meal boxes", base: 18, volatility: 0.08, risk: "Medium", type: "goods" },
+      { key: "custom_cakes", label: "Custom cakes", base: 26, volatility: 0.12, risk: "High", type: "goods" },
+      { key: "design_hours", label: "Design hours", base: 40, volatility: 0.1, risk: "Medium", type: "service" }
+    ]
+  },
+  {
+    key: "freelance",
+    label: "Freelance Marketplace",
+    category: "Business & Trade",
+    description: "Service demand swings by season.",
+    items: [
+      { key: "writing", label: "Writing gigs", base: 30, volatility: 0.1, risk: "Medium", type: "service" },
+      { key: "video_edit", label: "Video editing", base: 46, volatility: 0.12, risk: "High", type: "service" },
+      { key: "consulting", label: "Consulting calls", base: 58, volatility: 0.09, risk: "Medium", type: "service" }
+    ]
+  },
+  {
+    key: "farmers",
+    label: "Farmer's Market",
+    category: "Commodities & Daily Life",
+    description: "Oversupply means lower prices.",
+    items: [
+      { key: "tomatoes", label: "Tomatoes (crate)", base: 12, volatility: 0.08, risk: "Low", type: "goods" },
+      { key: "leafy_greens", label: "Leafy greens", base: 10, volatility: 0.07, risk: "Low", type: "goods" },
+      { key: "seasonal_fruit", label: "Seasonal fruit", base: 15, volatility: 0.12, risk: "Medium", type: "goods" }
+    ]
+  },
+  {
+    key: "supermarket",
+    label: "Supermarket",
+    category: "Commodities & Daily Life",
+    description: "Convenience markup on essentials.",
+    items: [
+      { key: "tomatoes", label: "Tomatoes (crate)", base: 18, volatility: 0.05, risk: "Low", type: "goods" },
+      { key: "packaged_food", label: "Packaged food", base: 22, volatility: 0.06, risk: "Low", type: "goods" },
+      { key: "dairy", label: "Dairy bundle", base: 16, volatility: 0.05, risk: "Low", type: "goods" }
+    ]
+  },
+  {
+    key: "fuel",
+    label: "Fuel & Utilities",
+    category: "Commodities & Daily Life",
+    description: "Sensitive to global supply shifts.",
+    items: [
+      { key: "fuel", label: "Fuel barrel", base: 64, volatility: 0.1, risk: "High", type: "goods" },
+      { key: "electricity", label: "Electricity credits", base: 40, volatility: 0.08, risk: "Medium", type: "service" }
+    ]
+  },
+  {
+    key: "real_estate",
+    label: "Real Estate",
+    category: "Asset & Lifestyle",
+    description: "Big ticket, slow-moving prices.",
+    items: [
+      { key: "studio_rent", label: "Studio rent (month)", base: 320, volatility: 0.04, risk: "Medium", type: "asset" },
+      { key: "city_plot", label: "City plot share", base: 520, volatility: 0.06, risk: "Medium", type: "asset" }
+    ]
+  },
+  {
+    key: "luxury",
+    label: "Gold & Luxury",
+    category: "Asset & Lifestyle",
+    description: "Status-driven demand.",
+    items: [
+      { key: "gold_bar", label: "Gold bar", base: 180, volatility: 0.05, risk: "Medium", type: "asset" },
+      { key: "luxury_watch", label: "Luxury watch", base: 260, volatility: 0.09, risk: "High", type: "goods" }
+    ]
+  },
+  {
+    key: "gadgets",
+    label: "Gadgets & Electronics",
+    category: "Asset & Lifestyle",
+    description: "Rapid depreciation, hype cycles.",
+    items: [
+      { key: "smartphone", label: "Smartphone", base: 140, volatility: 0.12, risk: "High", type: "goods" },
+      { key: "laptop", label: "Laptop", base: 220, volatility: 0.1, risk: "Medium", type: "goods" }
+    ]
+  },
+  {
+    key: "vehicles",
+    label: "Vehicle Market",
+    category: "Asset & Lifestyle",
+    description: "Prices swing with fuel and demand.",
+    items: [
+      { key: "scooter", label: "Scooter", base: 120, volatility: 0.08, risk: "Medium", type: "goods" },
+      { key: "compact_car", label: "Compact car", base: 260, volatility: 0.09, risk: "Medium", type: "goods" }
+    ]
+  }
+];
+
+const marketDefinitionMap = Object.fromEntries(marketDefinitions.map((market) => [market.key, market]));
+
+const buildInitialMarketState = () => {
+  const prices = {};
+  const trends = {};
+  marketDefinitions.forEach((market) => {
+    prices[market.key] = {};
+    trends[market.key] = {};
+    market.items.forEach((item) => {
+      const trend = (Math.random() - 0.5) * 0.06;
+      const price = item.base * (1 + trend);
+      prices[market.key][item.key] = Number(price.toFixed(2));
+      trends[market.key][item.key] = trend;
+    });
+  });
+  return {
+    day: 1,
+    cash: 8000,
+    marketKey: marketDefinitions[0].key,
+    prices,
+    trends,
+    inventory: {},
+    holdings: {},
+    quantities: {},
+    lastInsight: "Markets are open. Pick a stall to explore.",
+    log: []
+  };
+};
+
+const updateMarketState = (state) => {
+  const prices = { ...state.prices };
+  const trends = { ...state.trends };
+  marketDefinitions.forEach((market) => {
+    prices[market.key] = { ...prices[market.key] };
+    trends[market.key] = { ...trends[market.key] };
+    market.items.forEach((item) => {
+      const prevPrice = prices[market.key][item.key];
+      const drift = (Math.random() - 0.5) * item.volatility;
+      const trend = Math.max(-0.12, Math.min(0.12, (trends[market.key][item.key] || 0) + (Math.random() - 0.5) * 0.02));
+      const nextPrice = Math.max(item.base * 0.6, Math.min(item.base * 1.6, prevPrice * (1 + drift + trend)));
+      prices[market.key][item.key] = Number(nextPrice.toFixed(2));
+      trends[market.key][item.key] = trend;
+    });
+  });
+  return {
+    ...state,
+    day: state.day + 1,
+    prices,
+    trends,
+    lastInsight: "New day, new prices. Supply and demand shifted overnight."
+  };
+};
+
+const getMarketItem = (marketKey, itemKey) =>
+  marketDefinitionMap[marketKey].items.find((item) => item.key === itemKey);
+
+const findMarketItemLabel = (itemKey) => {
+  for (const market of marketDefinitions) {
+    const item = market.items.find((entry) => entry.key === itemKey);
+    if (item) return item.label;
+  }
+  return itemKey;
+};
+
 const bankAllocationDefaults = {
   savings: 0.3,
   emergency: 0.25,
@@ -231,7 +456,8 @@ export default function App() {
   const [decisionLabDifficulty, setDecisionLabDifficulty] = useState("mixed");
   const [decisionLabScenario, setDecisionLabScenario] = useState(() => generateDecisionLabScenario("mixed"));
   const [decisionLabResult, setDecisionLabResult] = useState(null);
-  const [marketExplorer, setMarketExplorer] = useState({ horizon: 10, contribution: 300, risk: 0.6 });
+  const [marketExplorer, setMarketExplorer] = useState(() => buildInitialMarketState());
+  const [marketProjection, setMarketProjection] = useState({ horizon: 10, contribution: 300, risk: 0.6 });
   const [toolkit, setToolkit] = useState({
     budgetIncome: 5200,
     budgetNeeds: 0.5,
@@ -325,17 +551,109 @@ export default function App() {
   const marketPoints = useMemo(() => {
     const points = [];
     let balance = 0;
-    for (let year = 1; year <= marketExplorer.horizon; year += 1) {
-      const baseReturn = 0.04 + marketExplorer.risk * 0.08;
-      balance = (balance + marketExplorer.contribution * 12) * (1 + baseReturn);
+    for (let year = 1; year <= marketProjection.horizon; year += 1) {
+      const baseReturn = 0.04 + marketProjection.risk * 0.08;
+      balance = (balance + marketProjection.contribution * 12) * (1 + baseReturn);
       points.push({ year, value: Math.round(balance) });
     }
     return points;
-  }, [marketExplorer]);
+  }, [marketProjection]);
 
   const handleDecisionLabNext = (difficulty = decisionLabDifficulty) => {
     setDecisionLabScenario(generateDecisionLabScenario(difficulty));
     setDecisionLabResult(null);
+  };
+
+  const activeMarket = marketDefinitionMap[marketExplorer.marketKey];
+  const activePrices = marketExplorer.prices[marketExplorer.marketKey] || {};
+  const activeTrends = marketExplorer.trends[marketExplorer.marketKey] || {};
+
+  const handleMarketSwitch = (marketKey) => {
+    setMarketExplorer((prev) => ({
+      ...prev,
+      marketKey,
+      lastInsight: `Switched to ${marketDefinitionMap[marketKey].label}. Price dynamics differ here.`
+    }));
+  };
+
+  const handleMarketQuantity = (itemKey, delta) => {
+    setMarketExplorer((prev) => {
+      const current = prev.quantities[itemKey] || 0;
+      return {
+        ...prev,
+        quantities: {
+          ...prev.quantities,
+          [itemKey]: Math.max(0, current + delta)
+        }
+      };
+    });
+  };
+
+  const handleMarketBuy = (itemKey) => {
+    setMarketExplorer((prev) => {
+      const qty = prev.quantities[itemKey] || 1;
+      const price = prev.prices[prev.marketKey][itemKey];
+      const cost = qty * price;
+      if (cost > prev.cash) {
+        return {
+          ...prev,
+          lastInsight: "Not enough cash for this purchase. Try a smaller quantity.",
+          log: [`Day ${prev.day}: Purchase blocked (insufficient cash).`, ...prev.log].slice(0, 5)
+        };
+      }
+      const item = getMarketItem(prev.marketKey, itemKey);
+      const inventory = { ...prev.inventory };
+      const holdings = { ...prev.holdings };
+      if (item.type === "asset") {
+        holdings[itemKey] = (holdings[itemKey] || 0) + qty;
+      } else {
+        inventory[itemKey] = (inventory[itemKey] || 0) + qty;
+      }
+      return {
+        ...prev,
+        cash: Number((prev.cash - cost).toFixed(2)),
+        inventory,
+        holdings,
+        lastInsight: `Bought ${qty} ${item.label} at ${formatCurrency(price)} each. ${item.risk} risk.`,
+        log: [`Day ${prev.day}: Bought ${qty} ${item.label}.`, ...prev.log].slice(0, 5)
+      };
+    });
+  };
+
+  const handleMarketSell = (itemKey) => {
+    setMarketExplorer((prev) => {
+      const qty = prev.quantities[itemKey] || 1;
+      const price = prev.prices[prev.marketKey][itemKey];
+      const item = getMarketItem(prev.marketKey, itemKey);
+      const inventory = { ...prev.inventory };
+      const holdings = { ...prev.holdings };
+      const available = item.type === "asset" ? holdings[itemKey] || 0 : inventory[itemKey] || 0;
+      if (qty > available) {
+        return {
+          ...prev,
+          lastInsight: `You only have ${available} available to sell.`,
+          log: [`Day ${prev.day}: Sale blocked (insufficient stock).`, ...prev.log].slice(0, 5)
+        };
+      }
+      if (item.type === "asset") {
+        holdings[itemKey] = available - qty;
+      } else {
+        inventory[itemKey] = available - qty;
+      }
+      const revenue = qty * price;
+      return {
+        ...prev,
+        cash: Number((prev.cash + revenue).toFixed(2)),
+        inventory,
+        holdings,
+        lastInsight: `Sold ${qty} ${item.label} at ${formatCurrency(price)} each.`,
+        log: [`Day ${prev.day}: Sold ${qty} ${item.label}.`, ...prev.log].slice(0, 5)
+      };
+    });
+  };
+
+  const handleMarketNextDay = () => {
+    setMarketExplorer((prev) => updateMarketState(prev));
   };
 
   return (
@@ -632,21 +950,128 @@ export default function App() {
         <section className="grid">
           <div className="panel">
             <h2>Market Explorer</h2>
-            <p className="muted">Experiment with contribution, horizon, and risk to see compounding.</p>
+            <p className="muted">Switch markets to feel price differences and demand shifts.</p>
+            <label className="input-row">
+              <span>Market</span>
+              <select value={marketExplorer.marketKey} onChange={(event) => handleMarketSwitch(event.target.value)}>
+                {marketDefinitions.map((market) => (
+                  <option key={market.key} value={market.key}>
+                    {market.label} · {market.category}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="metrics">
+              <div>
+                <p>Day</p>
+                <strong>{marketExplorer.day}</strong>
+              </div>
+              <div>
+                <p>Cash</p>
+                <strong>{formatCurrency(marketExplorer.cash)}</strong>
+              </div>
+            </div>
+            <p className="muted">{activeMarket.description}</p>
+            <button className="primary" onClick={handleMarketNextDay}>Next day</button>
+          </div>
+
+          <div className="panel">
+            <h2>Market floor</h2>
+            <div className="market-list">
+              {activeMarket.items.map((item) => {
+                const price = activePrices[item.key] ?? item.base;
+                const trend = activeTrends[item.key] ?? 0;
+                const trendClass = trend > 0.02 ? "trend-up" : trend < -0.02 ? "trend-down" : "trend-flat";
+                const qty = marketExplorer.quantities[item.key] || 1;
+                return (
+                  <div key={item.key} className="market-item">
+                    <div>
+                      <h3>{item.label}</h3>
+                      <p className="muted">{item.type} · Risk {item.risk}</p>
+                      <p className={`trend ${trendClass}`}>{trend >= 0 ? "▲" : "▼"} {(trend * 100).toFixed(1)}%</p>
+                    </div>
+                    <div>
+                      <strong>{formatCurrency(price)}</strong>
+                      <div className="market-actions">
+                        <button onClick={() => handleMarketQuantity(item.key, -1)}>-</button>
+                        <span>{qty}</span>
+                        <button onClick={() => handleMarketQuantity(item.key, 1)}>+</button>
+                        <button className="ghost" onClick={() => handleMarketBuy(item.key)}>Buy</button>
+                        <button className="ghost" onClick={() => handleMarketSell(item.key)}>Sell</button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="panel">
+            <h2>Your ledger</h2>
+            <p className="muted">Inventory carries across markets for resale.</p>
+            <div className="ledger-list">
+              {Object.keys(marketExplorer.inventory).length === 0 ? (
+                <p className="muted">No goods in inventory yet.</p>
+              ) : (
+                Object.entries(marketExplorer.inventory).map(([key, value]) => (
+                  <div key={key}>
+                    <p>{findMarketItemLabel(key)}</p>
+                    <strong>{value} units</strong>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="ledger-list">
+              {Object.keys(marketExplorer.holdings).length === 0 ? (
+                <p className="muted">No investments yet.</p>
+              ) : (
+                Object.entries(marketExplorer.holdings).map(([key, value]) => (
+                  <div key={key}>
+                    <p>{findMarketItemLabel(key)}</p>
+                    <strong>{value.toFixed(2)} units</strong>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="insight">
+              <p>{marketExplorer.lastInsight}</p>
+              {marketExplorer.log.length > 0 && (
+                <ul className="feedback">
+                  {marketExplorer.log.map((entry) => (
+                    <li key={entry}>{entry}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+
+          <div className="panel">
+            <h2>Market signals</h2>
+            <p className="muted">Demand and supply clues guide your next move.</p>
+            <ul className="feedback">
+              <li>Demand {activeTrends && Object.values(activeTrends).reduce((sum, value) => sum + value, 0) > 0 ? "rising" : "cooling"} in this market.</li>
+              <li>Compare markets: wholesale vs retail prices shift margins.</li>
+              <li>{marketExplorer.lastInsight}</li>
+            </ul>
+          </div>
+
+          <div className="panel">
+            <h2>Long-term compounding</h2>
+            <p className="muted">Use this to feel how steady investing stacks up.</p>
             <label className="input-row">
               <span>Monthly contribution</span>
               <input
                 type="number"
-                value={marketExplorer.contribution}
-                onChange={(event) => setMarketExplorer({ ...marketExplorer, contribution: Number(event.target.value) })}
+                value={marketProjection.contribution}
+                onChange={(event) => setMarketProjection({ ...marketProjection, contribution: Number(event.target.value) })}
               />
             </label>
             <label className="input-row">
               <span>Time horizon (years)</span>
               <input
                 type="number"
-                value={marketExplorer.horizon}
-                onChange={(event) => setMarketExplorer({ ...marketExplorer, horizon: Number(event.target.value) })}
+                value={marketProjection.horizon}
+                onChange={(event) => setMarketProjection({ ...marketProjection, horizon: Number(event.target.value) })}
               />
             </label>
             <label className="input-row slider">
@@ -657,24 +1082,13 @@ export default function App() {
                   min="0.2"
                   max="1"
                   step="0.1"
-                  value={marketExplorer.risk}
-                  onChange={(event) => setMarketExplorer({ ...marketExplorer, risk: Number(event.target.value) })}
+                  value={marketProjection.risk}
+                  onChange={(event) => setMarketProjection({ ...marketProjection, risk: Number(event.target.value) })}
                 />
-                <strong>{Math.round(marketExplorer.risk * 100)}%</strong>
+                <strong>{Math.round(marketProjection.risk * 100)}%</strong>
               </div>
             </label>
-          </div>
-          <div className="panel">
-            <h2>Compounding timeline</h2>
             <LineChart points={marketPoints.map((point) => ({ netWorth: point.value }))} height={140} />
-            <div className="projection-grid">
-              {marketPoints.slice(-3).map((point) => (
-                <div key={point.year}>
-                  <p>Year {point.year}</p>
-                  <strong>{formatCurrency(point.value)}</strong>
-                </div>
-              ))}
-            </div>
           </div>
         </section>
       )}
