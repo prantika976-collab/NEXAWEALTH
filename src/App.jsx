@@ -1,15 +1,15 @@
 import React, { useMemo, useState } from "react";
 import {
-  allocationPresets,
-  analyzeBehavior,
+  buildExpensePlan,
+  calculateExpenses,
   defaultDecision,
-  hydrateScenario,
-  lifestylePresets,
+  defaultState,
+  expenseCatalog,
+  generateLifeStage,
   marketPresets,
   projectFuture,
   riskPresets,
   runDecisionCycle,
-  scenarioPresets,
   summarizeFeedback
 } from "./sim/engine.js";
 
@@ -24,7 +24,6 @@ const formatPercent = (value) => `${(value * 100).toFixed(1)}%`;
 
 const modes = [
   { key: "simulation", label: "Simulation Mode" },
-  { key: "scenarios", label: "Life Scenarios" },
   { key: "decision_lab", label: "Decision Lab" },
   { key: "market", label: "Market Explorer" },
   { key: "toolkit", label: "Finance Toolkit" },
@@ -71,7 +70,7 @@ const LineChart = ({ points, height = 160, valueKey = "netWorth" }) => {
   );
 };
 
-const DecisionButtonGroup = ({ label, options, value, onChange }) => (
+const ChoiceButtons = ({ label, options, value, onChange }) => (
   <div className="choice-group">
     <p>{label}</p>
     <div className="choice-buttons">
@@ -104,14 +103,6 @@ const usePersistentState = (key, initialValue) => {
 
   return [state, setPersisted];
 };
-
-const ScenarioCard = ({ scenarioKey, scenario, onSelect }) => (
-  <button className="scenario-card" onClick={() => onSelect(scenarioKey)}>
-    <h3>{scenario.label}</h3>
-    <p>{scenario.goal}</p>
-    <span>{scenario.riskNote}</span>
-  </button>
-);
 
 const decisionLabItems = [
   {
@@ -203,9 +194,15 @@ const bankAllocationDefaults = {
 
 export default function App() {
   const [activeMode, setActiveMode] = useState("simulation");
-  const [scenarioKey, setScenarioKey] = usePersistentState("nexawealth-scenario", "first_job");
+  const [lifeStage, setLifeStage] = usePersistentState("nexawealth-life", generateLifeStage());
+  const [expensePlan, setExpensePlan] = usePersistentState("nexawealth-expenses", buildExpensePlan(lifeStage));
   const [decision, setDecision] = usePersistentState("nexawealth-decision", defaultDecision);
-  const [simulation, setSimulation] = usePersistentState("nexawealth-sim", hydrateScenario(scenarioKey));
+  const [simulationState, setSimulationState] = usePersistentState("nexawealth-sim", {
+    ...defaultState,
+    cashOnHand: lifeStage.assets,
+    debtBalance: lifeStage.debts.reduce((sum, debt) => sum + debt.balance, 0),
+    debts: lifeStage.debts
+  });
   const [decisionLabState, setDecisionLabState] = useState({});
   const [marketExplorer, setMarketExplorer] = useState({ horizon: 10, contribution: 300, risk: 0.6 });
   const [toolkit, setToolkit] = useState({
@@ -221,34 +218,57 @@ export default function App() {
     savingsRate: 0.04
   });
   const [banking, setBanking] = useState(bankAllocationDefaults);
-  const [timelineDecision, setTimelineDecision] = useState({ ...defaultDecision, allocation: "growth" });
+  const [timelineDecision, setTimelineDecision] = useState({ ...defaultDecision, investment: 500 });
 
-  const scenario = scenarioPresets[scenarioKey] ?? scenarioPresets.first_job;
-  const simulationState = simulation.state;
+  const expenses = useMemo(
+    () => calculateExpenses({ lifeStage, quantities: expensePlan.quantities, priceTiers: expensePlan.priceTiers }),
+    [lifeStage, expensePlan]
+  );
+
   const latestSnapshot = simulationState.history.at(-1);
 
   const projection = useMemo(
-    () =>
-      projectFuture({ scenario, decision, state: simulationState }, 12),
-    [scenario, decision, simulationState]
+    () => projectFuture({ lifeStage, decision, expenses, state: simulationState }, 12),
+    [lifeStage, decision, expenses, simulationState]
   );
-  const feedback = latestSnapshot ? summarizeFeedback(latestSnapshot) : [];
-  const behavior = analyzeBehavior(simulationState.history);
 
-  const applyScenario = (key) => {
-    setScenarioKey(key);
-    setSimulation(hydrateScenario(key));
+  const feedback = latestSnapshot ? summarizeFeedback(latestSnapshot, decision) : [];
+
+  const recommendedSpend = Math.round(lifeStage.income * 0.55);
+  const spendRisk = expenses.total > lifeStage.income * 0.8 ? "risky" : expenses.total > lifeStage.income * 0.65 ? "tight" : "safe";
+
+  const handleGenerateLifeStage = () => {
+    const nextStage = generateLifeStage();
+    setLifeStage(nextStage);
+    setExpensePlan(buildExpensePlan(nextStage));
+    setSimulationState({
+      ...defaultState,
+      cashOnHand: nextStage.assets,
+      debtBalance: nextStage.debts.reduce((sum, debt) => sum + debt.balance, 0),
+      debts: nextStage.debts
+    });
   };
 
   const handleRunCycle = () => {
-    setSimulation((prev) => ({
-      ...prev,
-      state: runDecisionCycle({ scenario, decision, state: prev.state })
-    }));
+    setSimulationState((prev) =>
+      runDecisionCycle({
+        lifeStage,
+        decision,
+        expenses,
+        state: prev
+      })
+    );
   };
 
   const handleReset = () => {
-    setSimulation(hydrateScenario(scenarioKey));
+    setExpensePlan(buildExpensePlan(lifeStage));
+    setDecision(defaultDecision);
+    setSimulationState({
+      ...defaultState,
+      cashOnHand: lifeStage.assets,
+      debtBalance: lifeStage.debts.reduce((sum, debt) => sum + debt.balance, 0),
+      debts: lifeStage.debts
+    });
   };
 
   const totalBankAllocation = Object.values(banking).reduce((sum, value) => sum + value, 0);
@@ -267,12 +287,12 @@ export default function App() {
   const savingsProjection = toolkit.savingsMonthly * 12 * (1 + toolkit.savingsRate);
 
   const timelineNow = useMemo(
-    () => projectFuture({ scenario, decision, state: simulationState }, 60),
-    [scenario, decision, simulationState]
+    () => projectFuture({ lifeStage, decision, expenses, state: simulationState }, 60),
+    [lifeStage, decision, expenses, simulationState]
   );
   const timelineAlt = useMemo(
-    () => projectFuture({ scenario, decision: timelineDecision, state: simulationState }, 60),
-    [scenario, timelineDecision, simulationState]
+    () => projectFuture({ lifeStage, decision: timelineDecision, expenses, state: simulationState }, 60),
+    [lifeStage, timelineDecision, expenses, simulationState]
   );
 
   const marketPoints = useMemo(() => {
@@ -290,19 +310,18 @@ export default function App() {
     <div className="app">
       <header className="hero">
         <div>
-          <p className="tag">Nexawealth · Version 2</p>
-          <h1>Financial literacy through lived decisions.</h1>
+          <p className="tag">Nexawealth · Simulation v3</p>
+          <h1>Live a financial life, not a spreadsheet.</h1>
           <p>
-            Every mode is interactive. Choose actions, see consequences, and shape a financial future
-            without lectures or theory dumps.
+            Make real choices, see the impact, and feel how small decisions compound over time.
           </p>
         </div>
         <div className="hero-card">
-          <p>Active scenario</p>
-          <h3>{scenario.label}</h3>
-          <p className="muted">{scenario.goal}</p>
-          <button className="ghost" onClick={handleReset}>
-            Reset scenario
+          <p>Current life stage</p>
+          <h3>{lifeStage.label}</h3>
+          <p className="muted">Age {lifeStage.age} · {lifeStage.dependents} dependents · {lifeStage.stability} stability</p>
+          <button className="ghost" onClick={handleGenerateLifeStage}>
+            Generate new life stage
           </button>
         </div>
       </header>
@@ -318,44 +337,140 @@ export default function App() {
       {activeMode === "simulation" && (
         <section className="grid">
           <div className="panel">
-            <h2>Simulation Decisions</h2>
-            <DecisionButtonGroup
-              label="Lifestyle choice"
-              value={decision.lifestyle}
-              onChange={(value) => setDecision({ ...decision, lifestyle: value })}
-              options={Object.entries(lifestylePresets).map(([value, preset]) => ({
-                value,
-                label: preset.label
-              }))}
-            />
-            <DecisionButtonGroup
-              label="Income allocation"
-              value={decision.allocation}
-              onChange={(value) => setDecision({ ...decision, allocation: value })}
-              options={Object.entries(allocationPresets).map(([value, preset]) => ({
-                value,
-                label: preset.label
-              }))}
-            />
-            <DecisionButtonGroup
-              label="Debt strategy"
-              value={decision.debtStrategy}
-              onChange={(value) => setDecision({ ...decision, debtStrategy: value })}
-              options={[
-                { value: "minimum", label: "Minimum" },
-                { value: "aggressive", label: "Aggressive" }
-              ]}
-            />
-            <DecisionButtonGroup
-              label="Investment risk"
-              value={decision.riskProfile}
-              onChange={(value) => setDecision({ ...decision, riskProfile: value })}
-              options={Object.entries(riskPresets).map(([value, preset]) => ({
-                value,
-                label: preset.label
-              }))}
-            />
-            <DecisionButtonGroup
+            <h2>Life stage snapshot</h2>
+            <div className="metrics">
+              <div>
+                <p>Monthly income</p>
+                <strong>{formatCurrency(lifeStage.income)}</strong>
+              </div>
+              <div>
+                <p>Location cost</p>
+                <strong>{lifeStage.location}</strong>
+              </div>
+              <div>
+                <p>Starting cash</p>
+                <strong>{formatCurrency(lifeStage.assets)}</strong>
+              </div>
+              <div>
+                <p>Total debt</p>
+                <strong>{formatCurrency(simulationState.debts.reduce((sum, debt) => sum + debt.balance, 0))}</strong>
+              </div>
+            </div>
+            <div className="debt-list">
+              {simulationState.debts.length === 0 ? (
+                <p className="muted">No active debt. Keep building a buffer.</p>
+              ) : (
+                simulationState.debts.map((debt) => (
+                  <div key={debt.type}>
+                    <p>{debt.type}</p>
+                    <strong>{formatCurrency(debt.balance)}</strong>
+                    <span>Min due {formatCurrency(debt.minimumDue)} · {Math.round(debt.rate * 100)}% APR</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="panel">
+            <h2>Monthly spending choices</h2>
+            <p className="muted">Most people in this stage spend around {formatCurrency(recommendedSpend)} on living costs.</p>
+            <p className={`spend-${spendRisk}`}>
+              Your current plan is {spendRisk === "safe" ? "affordable" : spendRisk === "tight" ? "tight" : "risky"}.
+            </p>
+            <div className="expense-grid">
+              {Object.entries(expenseCatalog).map(([category, items]) => (
+                <div key={category} className="expense-category">
+                  <h3>{category}</h3>
+                  {items.map((item) => {
+                    const qty = expensePlan.quantities[item.key] ?? 0;
+                    const tier = expensePlan.priceTiers[item.key] ?? "typical";
+                    const cost = expenses.items.find((entry) => entry.key === item.key)?.cost ?? 0;
+                    return (
+                      <div key={item.key} className="expense-item">
+                        <div>
+                          <p>{item.label}</p>
+                          <span>
+                            {item.unit} · ${item.priceRange[0].toFixed(2)} - ${item.priceRange[1].toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="expense-controls">
+                          <button
+                            onClick={() =>
+                              setExpensePlan((prev) => ({
+                                ...prev,
+                                quantities: {
+                                  ...prev.quantities,
+                                  [item.key]: Math.max(0, qty - 1)
+                                }
+                              }))
+                            }
+                          >
+                            -
+                          </button>
+                          <strong>{qty}</strong>
+                          <button
+                            onClick={() =>
+                              setExpensePlan((prev) => ({
+                                ...prev,
+                                quantities: {
+                                  ...prev.quantities,
+                                  [item.key]: qty + 1
+                                }
+                              }))
+                            }
+                          >
+                            +
+                          </button>
+                          <select
+                            value={tier}
+                            onChange={(event) =>
+                              setExpensePlan((prev) => ({
+                                ...prev,
+                                priceTiers: { ...prev.priceTiers, [item.key]: event.target.value }
+                              }))
+                            }
+                          >
+                            <option value="low">Low</option>
+                            <option value="typical">Typical</option>
+                            <option value="high">High</option>
+                          </select>
+                        </div>
+                        <div className="expense-cost">{formatCurrency(cost)}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="panel">
+            <h2>Money allocation</h2>
+            <label className="input-row">
+              <span>Debt repayment</span>
+              <input
+                type="number"
+                value={decision.debtPayment}
+                onChange={(event) => setDecision({ ...decision, debtPayment: Number(event.target.value) })}
+              />
+            </label>
+            <label className="input-row">
+              <span>Investments</span>
+              <input
+                type="number"
+                value={decision.investment}
+                onChange={(event) => setDecision({ ...decision, investment: Number(event.target.value) })}
+              />
+            </label>
+            <label className="input-row">
+              <span>Emergency cash</span>
+              <input
+                type="number"
+                value={decision.emergencyCash}
+                onChange={(event) => setDecision({ ...decision, emergencyCash: Number(event.target.value) })}
+              />
+            </label>
+            <ChoiceButtons
               label="Market climate"
               value={decision.marketMode}
               onChange={(value) => setDecision({ ...decision, marketMode: value })}
@@ -364,8 +479,20 @@ export default function App() {
                 label: preset.label
               }))}
             />
+            <ChoiceButtons
+              label="Investment risk"
+              value={decision.riskProfile}
+              onChange={(value) => setDecision({ ...decision, riskProfile: value })}
+              options={Object.entries(riskPresets).map(([value, preset]) => ({
+                value,
+                label: preset.label
+              }))}
+            />
             <button className="primary" onClick={handleRunCycle}>
               Run monthly cycle
+            </button>
+            <button className="ghost" onClick={handleReset}>
+              Reset this simulation
             </button>
           </div>
 
@@ -379,11 +506,7 @@ export default function App() {
               <Card title="Debt" value={formatCurrency(latestSnapshot?.debtBalance ?? simulationState.debtBalance)} />
               <Card title="Credit score" value={latestSnapshot?.creditScore ?? simulationState.creditScore} />
               <Card title="Stress" value={`${latestSnapshot?.stressLevel ?? simulationState.stressLevel}%`} />
-              <Card
-                title="Market return"
-                value={latestSnapshot ? formatPercent(latestSnapshot.marketReturn) : "–"}
-                footnote="Monthly"
-              />
+              <Card title="Market return" value={latestSnapshot ? formatPercent(latestSnapshot.marketReturn) : "–"} footnote="Monthly" />
             </div>
             <div className="chart-block">
               <h3>Net worth trajectory</h3>
@@ -392,7 +515,7 @@ export default function App() {
           </div>
 
           <div className="panel">
-            <h2>Decision Feedback</h2>
+            <h2>Cycle feedback</h2>
             {feedback.length === 0 ? (
               <p className="muted">Run a cycle to receive feedback and consequences.</p>
             ) : (
@@ -407,37 +530,17 @@ export default function App() {
               <strong>{latestSnapshot?.event ?? "No events yet"}</strong>
             </div>
           </div>
-        </section>
-      )}
 
-      {activeMode === "scenarios" && (
-        <section className="grid">
           <div className="panel">
-            <h2>Life Scenario Mode</h2>
-            <p className="muted">Each scenario changes income stability, risk, and success definition.</p>
-            <div className="scenario-grid">
-              {Object.entries(scenarioPresets).map(([key, preset]) => (
-                <ScenarioCard key={key} scenarioKey={key} scenario={preset} onSelect={applyScenario} />
+            <h2>12-month projection</h2>
+            <LineChart points={projection.map((point) => ({ netWorth: point.netWorth }))} height={120} />
+            <div className="projection-grid">
+              {projection.slice(-3).map((point) => (
+                <div key={point.month}>
+                  <p>Month {point.month}</p>
+                  <strong>{formatCurrency(point.netWorth)}</strong>
+                </div>
               ))}
-            </div>
-          </div>
-          <div className="panel">
-            <h2>Scenario details</h2>
-            <p>{scenario.goal}</p>
-            <p className="muted">{scenario.riskNote}</p>
-            <div className="metrics">
-              <div>
-                <p>Monthly income</p>
-                <strong>{formatCurrency(scenario.income)}</strong>
-              </div>
-              <div>
-                <p>Fixed expenses</p>
-                <strong>{formatCurrency(scenario.fixedExpenses)}</strong>
-              </div>
-              <div>
-                <p>Starting debt</p>
-                <strong>{formatCurrency(scenario.debtBalance)}</strong>
-              </div>
             </div>
           </div>
         </section>
@@ -621,24 +724,22 @@ export default function App() {
           <div className="panel">
             <h2>Future Self Timeline</h2>
             <p className="muted">Compare your current decisions with an alternate choice.</p>
-            <DecisionButtonGroup
-              label="Alternate allocation"
-              value={timelineDecision.allocation}
-              onChange={(value) => setTimelineDecision({ ...timelineDecision, allocation: value })}
-              options={Object.entries(allocationPresets).map(([value, preset]) => ({
-                value,
-                label: preset.label
-              }))}
-            />
-            <DecisionButtonGroup
-              label="Alternate lifestyle"
-              value={timelineDecision.lifestyle}
-              onChange={(value) => setTimelineDecision({ ...timelineDecision, lifestyle: value })}
-              options={Object.entries(lifestylePresets).map(([value, preset]) => ({
-                value,
-                label: preset.label
-              }))}
-            />
+            <label className="input-row">
+              <span>Alternate investment</span>
+              <input
+                type="number"
+                value={timelineDecision.investment}
+                onChange={(event) => setTimelineDecision({ ...timelineDecision, investment: Number(event.target.value) })}
+              />
+            </label>
+            <label className="input-row">
+              <span>Alternate debt payment</span>
+              <input
+                type="number"
+                value={timelineDecision.debtPayment}
+                onChange={(event) => setTimelineDecision({ ...timelineDecision, debtPayment: Number(event.target.value) })}
+              />
+            </label>
           </div>
           <div className="panel">
             <h2>60-month projection</h2>
@@ -687,7 +788,7 @@ export default function App() {
               </div>
               <div>
                 <p>Missed</p>
-                <strong>-18 pts</strong>
+                <strong>-20 pts</strong>
               </div>
             </div>
           </div>
@@ -756,19 +857,19 @@ export default function App() {
             <h2>Reflection & Insights</h2>
             <div className="metrics">
               <div>
-                <p>Risk appetite</p>
-                <strong>{behavior.risk}</strong>
+                <p>Net worth trend</p>
+                <strong>{latestSnapshot ? formatCurrency(latestSnapshot.netWorth) : "Run a cycle"}</strong>
               </div>
               <div>
-                <p>Mindset</p>
-                <strong>{behavior.mindset}</strong>
+                <p>Stress trend</p>
+                <strong>{latestSnapshot ? `${latestSnapshot.stressLevel}%` : "Run a cycle"}</strong>
               </div>
               <div>
-                <p>Tendency</p>
-                <strong>{behavior.tendency}</strong>
+                <p>Credit trend</p>
+                <strong>{latestSnapshot ? latestSnapshot.creditScore : "Run a cycle"}</strong>
               </div>
             </div>
-            <p className="muted">{behavior.suggestion}</p>
+            <p className="muted">Try adjusting spending habits to see how stability shifts.</p>
           </div>
           <div className="panel">
             <h2>Recent behavior</h2>
@@ -788,7 +889,7 @@ export default function App() {
       )}
 
       <footer>
-        <p>Nexawealth V2 · Experiential finance through decisions · State saved in browser</p>
+        <p>Nexawealth Simulation v3 · Experiential finance through decisions · State saved in browser</p>
       </footer>
     </div>
   );
