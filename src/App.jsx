@@ -522,6 +522,73 @@ const applyDecisionDelta = (decision, impact) => ({
   riskProfile: impact.riskProfile ?? decision.riskProfile
 });
 
+const knowledgeSections = [
+  {
+    key: "basics",
+    title: "Money basics",
+    items: [
+      { key: "cashflow", title: "Cashflow", summary: "Money coming in vs going out.", detail: "Positive cashflow means you can save or invest. Negative cashflow eats into savings." },
+      { key: "networth", title: "Net worth", summary: "What you own minus what you owe.", detail: "Assets raise it, liabilities lower it. It changes with every big decision." },
+      { key: "liquidity", title: "Liquidity", summary: "How quickly you can access money.", detail: "Cash is liquid. A house is not. Liquidity keeps you calm in surprises." }
+    ]
+  },
+  {
+    key: "banking",
+    title: "Banking & savings",
+    items: [
+      { key: "savings", title: "Savings account", summary: "Safe place for daily money.", detail: "Gives small interest, easy access, and works for emergency funds." },
+      { key: "fd", title: "Fixed deposit (FD)", summary: "Lock money for a fixed return.", detail: "Higher interest than savings, but early withdrawal has penalties." },
+      { key: "rd", title: "Recurring deposit (RD)", summary: "Save a fixed amount monthly.", detail: "Good for disciplined saving with predictable returns." },
+      { key: "interest", title: "Interest", summary: "Money paid for borrowing or saving.", detail: "Savings earn interest; loans charge interest. Rate decides speed." }
+    ]
+  },
+  {
+    key: "payments",
+    title: "Payments & charges",
+    items: [
+      { key: "upi", title: "UPI vs card vs cash", summary: "Different tools, different trade-offs.", detail: "Cards add rewards but can hide spending. Cash feels real. UPI is quick but easy to overuse." },
+      { key: "fees", title: "Hidden fees", summary: "Small charges that add up.", detail: "Delivery fees, platform fees, late charges — they quietly raise total cost." },
+      { key: "failed", title: "Payment failures", summary: "Money can get stuck temporarily.", detail: "Banks usually reverse it in hours/days. Keep buffer for timing gaps." }
+    ]
+  },
+  {
+    key: "credit",
+    title: "Credit & debt",
+    items: [
+      { key: "credit_score", title: "Credit score", summary: "Trust score for borrowing.", detail: "On-time payments lift it. Missed payments drop it fast." },
+      { key: "emi", title: "EMI", summary: "Pay a big cost over time.", detail: "Convenient, but interest means you pay more than the sticker price." },
+      { key: "credit_util", title: "Credit utilization", summary: "How much of your limit you use.", detail: "High utilization signals risk and can reduce your score." }
+    ]
+  },
+  {
+    key: "investing",
+    title: "Investing basics",
+    items: [
+      { key: "stocks", title: "Stocks", summary: "Owning a small slice of a company.", detail: "Prices move with business performance and market mood." },
+      { key: "mf", title: "Mutual funds", summary: "Pooled investments run by professionals.", detail: "Diversified, smoother than single stocks, still has risk." },
+      { key: "risk_return", title: "Risk vs return", summary: "Higher returns usually mean higher swings.", detail: "Short-term dips can be normal. Time helps smooth outcomes." }
+    ]
+  },
+  {
+    key: "taxes",
+    title: "Taxes & deductions",
+    items: [
+      { key: "income_tax", title: "Income tax", summary: "A part of your income goes to tax.", detail: "Rates vary by slab. Deductions reduce taxable income." },
+      { key: "gst", title: "GST", summary: "Tax added to goods and services.", detail: "It’s built into prices, so the total often looks higher than expected." },
+      { key: "deductions", title: "Deductions", summary: "Expenses that lower tax.", detail: "Insurance, retirement funds, and some investments can reduce taxable income." }
+    ]
+  },
+  {
+    key: "everyday",
+    title: "Everyday money mechanics",
+    items: [
+      { key: "inflation", title: "Inflation", summary: "Prices rise over time.", detail: "Same money buys less later, which is why savings must grow." },
+      { key: "fees_interest", title: "Interest traps", summary: "Small rates can grow fast.", detail: "Credit card interest compounds quickly. Paying minimum costs more." },
+      { key: "opportunity", title: "Opportunity cost", summary: "Choosing one thing means skipping another.", detail: "A luxury today might mean less flexibility tomorrow." }
+    ]
+  }
+];
+
 const bankAllocationDefaults = {
   savings: 0.3,
   emergency: 0.25,
@@ -577,6 +644,7 @@ export default function App() {
   const [marketCase, setMarketCase] = useState(() => buildFutureCase("market"));
   const [salaryChoice, setSalaryChoice] = useState("current");
   const [marketChoice, setMarketChoice] = useState("current");
+  const [knowledgeOpen, setKnowledgeOpen] = useState({});
 
   const expenses = useMemo(
     () => calculateExpenses({ lifeStage, quantities: expensePlan.quantities, priceTiers: expensePlan.priceTiers }),
@@ -1539,53 +1607,30 @@ export default function App() {
 
       {activeMode === "exploration" && (
         <section className="grid">
-          <div className="panel">
-            <h2>Why banks make money</h2>
-            <p className="muted">Tap each lever to see how bank profits shift.</p>
-            <div className="metrics">
-              <div>
-                <p>Deposit rate</p>
-                <strong>3%</strong>
-              </div>
-              <div>
-                <p>Lending rate</p>
-                <strong>9%</strong>
-              </div>
-              <div>
-                <p>Spread</p>
-                <strong>6%</strong>
-              </div>
-            </div>
-            <p className="muted">The spread funds operations and profit, which is why loan rates feel higher.</p>
-          </div>
-          <div className="panel">
-            <h2>Inflation in action</h2>
-            <p>
-              A $100 basket today costs ${Math.round(100 * 1.08)} next year at 8% inflation. Your cash loses buying power
-              unless it grows faster.
-            </p>
-          </div>
-          <div className="panel">
-            <h2>Credit score dynamics</h2>
-            <p className="muted">On-time payments lift scores, missed payments drop them fast.</p>
-            <div className="metrics">
-              <div>
-                <p>On-time</p>
-                <strong>+6 pts</strong>
-              </div>
-              <div>
-                <p>Missed</p>
-                <strong>-20 pts</strong>
+          {knowledgeSections.map((section) => (
+            <div key={section.key} className="panel">
+              <h2>{section.title}</h2>
+              <div className="knowledge-list">
+                {section.items.map((item) => {
+                  const isOpen = knowledgeOpen[item.key];
+                  return (
+                    <button
+                      key={item.key}
+                      className={`knowledge-item ${isOpen ? "open" : ""}`}
+                      onClick={() => setKnowledgeOpen((prev) => ({ ...prev, [item.key]: !prev[item.key] }))}
+                    >
+                      <div>
+                        <strong>{item.title}</strong>
+                        <p className="muted">{item.summary}</p>
+                        {isOpen && <p>{item.detail}</p>}
+                      </div>
+                      <span>{isOpen ? "−" : "+"}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
-          </div>
-          <div className="panel">
-            <h2>Why investing early matters</h2>
-            <p>
-              Invest $300/mo for 10 years at 8% and you reach {formatCurrency(52000)}. Wait 5 years and it falls near
-              {formatCurrency(32000)}.
-            </p>
-          </div>
+          ))}
         </section>
       )}
 
